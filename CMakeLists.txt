@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_COMPILER_ARCHITECTURE_ID "x64")
 
 # https://cmake.org/cmake/help/v3.6/module/FindBoost.html
-set(Boost_ARCHITECTURE "-x64")
+#set(Boost_ARCHITECTURE "-x64")
 #set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -26,16 +26,18 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 set(
   file_hpp
-    Config.hpp
-    Server.hpp
-    root_certificates.hpp
+    #Config.hpp
+    #Server.hpp
+    #root_certificates.hpp
+    mime_type.hpp
     server_certificate.hpp
+    task_group.hpp
   )
 
 set(
   file_cpp
-    Config.cpp
-    Server.cpp
+    #Config.cpp
+    #Server.cpp
     main.cpp
   )
 
