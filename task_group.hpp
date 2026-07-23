@@ -5,14 +5,13 @@
 #pragma once
 
 #include <list>
-#include <thread>
 
 #include <boost/asio.hpp>
 
 namespace net       = boost::asio;
 
-class task_group
-{
+class task_group {
+
     std::mutex mtx_;
     net::steady_timer cv_;
     std::list<net::cancellation_signal> css_;
