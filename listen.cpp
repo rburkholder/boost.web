@@ -332,8 +332,14 @@ listen(
             try {
               std::rethrow_exception(e);
             }
-            catch(std::exception& e) {
-              std::cerr << "Error in session: " << e.what() << "\n";
+            catch( std::exception& e ) {
+              static const std::string s1( "The socket was closed due to a timeout" );
+              const std::string s2( e.what() );
+              const auto result = s1.compare( 0, s1.size(), s2, 0, s1.size() );
+              if ( 0 == result ) {}
+              else {
+                std::cerr << "Error in session: " << e.what() << "\n";
+              }
             }
           }
         }
