@@ -40,6 +40,7 @@ set(
   file_cpp
     #Config.cpp
     #Server.cpp
+    handle_signals.cpp
     listen.cpp
     main.cpp
   )
