@@ -21,6 +21,7 @@ mime_type(beast::string_view path)
     if(iequals(ext, ".php"))  return "text/html";
     if(iequals(ext, ".css"))  return "text/css";
     if(iequals(ext, ".txt"))  return "text/plain";
+    if(iequals(ext, ".text")) return "text/plain";
     if(iequals(ext, ".js"))   return "application/javascript";
     if(iequals(ext, ".json")) return "application/json";
     if(iequals(ext, ".xml"))  return "application/xml";
