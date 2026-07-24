@@ -105,6 +105,8 @@ handle_request(
     if(req.target().back() == '/')
         path.append("index.html");
 
+    std::cout << "request: " << path.c_str() << std::endl;
+
     // Attempt to open the file
     beast::error_code ec;
     http::file_body::value_type body;
@@ -256,28 +258,32 @@ detect_session(
   // coroutine, but only allow terminal cancellation to propagate to async
   // operations. This setting will be inherited by all child coroutines.
   co_await net::this_coro::reset_cancellation_state(
-      net::enable_total_cancellation(), net::enable_terminal_cancellation());
+    net::enable_total_cancellation(), net::enable_terminal_cancellation()
+  );
 
   // We want to be able to continue performing new async operations, such as
   // cleanups, even after the coroutine is cancelled. This setting will be
   // inherited by all child coroutines.
-  co_await net::this_coro::throw_if_cancelled(false);
+  co_await net::this_coro::throw_if_cancelled( false );
 
   stream.expires_after(std::chrono::seconds(30));
 
-  if(co_await beast::async_detect_ssl(stream, buffer))
-  {
-    ssl::stream<stream_type> ssl_stream{ std::move(stream), ctx };
+  if( co_await beast::async_detect_ssl( stream, buffer ) ) {
+
+    ssl::stream<stream_type> ssl_stream{ std::move( stream ), ctx };
+
+    //auto handle = ssl_stream.native_handle();   // ssl_st
 
     auto bytes_transferred = co_await ssl_stream.async_handshake(
-        ssl::stream_base::server, buffer.data());
+      ssl::stream_base::server, buffer.data()
+    );
 
-    buffer.consume(bytes_transferred);
+    buffer.consume( bytes_transferred );
 
-    co_await run_session(ssl_stream, buffer, doc_root);
+    co_await run_session( ssl_stream, buffer, doc_root );
 
-    if(!ssl_stream.lowest_layer().is_open())
-        co_return;
+    if( !ssl_stream.lowest_layer().is_open() )
+      co_return;
 
     // Gracefully close the stream
     auto [ec] = co_await ssl_stream.async_shutdown(net::as_tuple);
@@ -288,10 +294,10 @@ detect_session(
   {
     co_await run_session(stream, buffer, doc_root);
 
-    if(!stream.socket().is_open())
-        co_return;
+    if( !stream.socket().is_open() )
+      co_return;
 
-    stream.socket().shutdown(net::ip::tcp::socket::shutdown_send);
+    stream.socket().shutdown( net::ip::tcp::socket::shutdown_send );
   }
 }
 
@@ -309,23 +315,24 @@ listen(
 
   // Allow total cancellation to propagate to async operations.
   co_await net::this_coro::reset_cancellation_state(
-      net::enable_total_cancellation());
+    net::enable_total_cancellation()
+  );
 
-  while(!cs.cancelled()) {
+  while( !cs.cancelled() ) {
 
-    auto socket_executor = net::make_strand(executor.get_inner_executor());
-    auto [ec, socket] =
-        co_await acceptor.async_accept(socket_executor, net::as_tuple);
+    auto socket_executor = net::make_strand(executor.get_inner_executor() );
+    auto [ ec, socket ] =
+      co_await acceptor.async_accept( socket_executor, net::as_tuple );
 
-    if(ec == net::error::operation_aborted)
-        co_return;
+    if( ec == net::error::operation_aborted )
+      co_return;
 
-    if(ec)
-        throw boost::system::system_error{ ec };
+    if( ec )
+      throw boost::system::system_error{ ec };
 
     net::co_spawn(
       std::move(socket_executor),
-      detect_session( stream_type{ std::move(socket) }, ctx, doc_root),
+      detect_session( stream_type{ std::move( socket ) }, ctx, doc_root ),
       task_group.adapt(
         []( std::exception_ptr e ) {
           if ( e ) {
@@ -338,7 +345,7 @@ listen(
               const auto result = s1.compare( 0, s1.size(), s2, 0, s1.size() );
               if ( 0 == result ) {}
               else {
-                std::cerr << "Error in session: " << e.what() << "\n";
+                std::cerr << "error (listen): " << e.what() << "\n";
               }
             }
           }
