@@ -43,6 +43,7 @@ set(
     handle_signals.cpp
     listen.cpp
     main.cpp
+    server_certificate.cpp
   )
 
 add_executable(
