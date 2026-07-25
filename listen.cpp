@@ -85,7 +85,6 @@ response_t server_error( http::request<Body, http::basic_fields<Allocator>>& req
 };
 
 // Return a response for the given request.
-//
 // The concrete type of the response message (which depends on the
 // request), is type-erased in message_generator.
 template<class Body, class Allocator>
@@ -126,8 +125,25 @@ handle_request(
   body.open( path.c_str(), beast::file_mode::scan, ec );
 
   // Handle the case where the file doesn't exist
-  if( ec == beast::errc::no_such_file_or_directory )
-    return not_found( request, request.target() );
+  if( ec == beast::errc::no_such_file_or_directory ) {
+    if ( 0 == request.target().compare( "/robots.txt" ) ) {
+      static const std::string content( "User-agent: *\nAllow: /\n" );
+      http::response<http::string_body> response{
+        std::piecewise_construct,
+        std::make_tuple( content ),
+        std::make_tuple( http::status::ok, request.version() )
+      };
+      response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+      response.set(http::field::content_type, mime_type( path ));
+      response.content_length( content.size() );
+      response.keep_alive( request.keep_alive() );
+      return response;
+    }
+    else {
+      return not_found( request, request.target() );
+    }
+
+  }
 
   // Handle an unknown error
   if( ec )
@@ -138,11 +154,11 @@ handle_request(
 
   // Respond to HEAD request
   if ( request.method() == http::verb::head ) {
-    http::response<http::empty_body> response{http::status::ok, request.version()};
-    response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    response.set(http::field::content_type, mime_type(path));
-    response.content_length(size);
-    response.keep_alive(request.keep_alive());
+    http::response<http::empty_body> response{ http::status::ok, request.version() };
+    response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+    response.set( http::field::content_type, mime_type( path ) );
+    response.content_length( size );
+    response.keep_alive( request.keep_alive() );
     return response;
   }
 
