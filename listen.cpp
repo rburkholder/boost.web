@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <boost/log/trivial.hpp>
 
 #include <boost/beast/ssl.hpp>
@@ -47,160 +45,161 @@ template<class Body, class Allocator>
 http::message_generator
 handle_request(
   beast::string_view doc_root,
-  http::request<Body, http::basic_fields<Allocator>>&& req
+  http::request<Body, http::basic_fields<Allocator>>&& request
 )
 {
-    // Returns a bad request response
-    auto const bad_request =
-    [&req](beast::string_view why)
-    {
-      http::response<http::string_body> res{http::status::bad_request, req.version()};
-      res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-      res.set(http::field::content_type, "text/html");
-      res.keep_alive(req.keep_alive());
-      res.body() = std::string(why);
-      res.prepare_payload();
-      return res;
-    };
-
-    // Returns a not found response
-    auto const not_found =
-    [&req](beast::string_view target)
-    {
-      http::response<http::string_body> res{http::status::not_found, req.version()};
-      res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-      res.set(http::field::content_type, "text/html");
-      res.keep_alive(req.keep_alive());
-      res.body() = "The resource '" + std::string(target) + "' was not found.";
-      res.prepare_payload();
-      return res;
-    };
-
-    // Returns a server error response
-    auto const server_error =
-    [&req](beast::string_view what)
-    {
-      http::response<http::string_body> res{http::status::internal_server_error, req.version()};
-      res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-      res.set(http::field::content_type, "text/html");
-      res.keep_alive(req.keep_alive());
-      res.body() = "An error occurred: '" + std::string(what) + "'";
-      res.prepare_payload();
-      return res;
-    };
-
-    // Make sure we can handle the method
-    if( req.method() != http::verb::get &&
-        req.method() != http::verb::head
-      )
-      return bad_request("Unknown HTTP-method");
-
-    // Request path must be absolute and not contain "..".
-    if( req.target().empty() ||
-        req.target()[0] != '/' ||
-        req.target().find("..") != beast::string_view::npos
-      )
-      return bad_request("Illegal request-target");
-
-    // Build the path to the requested file
-    std::string path = path_cat(doc_root, req.target());
-    if(req.target().back() == '/')
-        path.append("index.html");
-
-    BOOST_LOG_TRIVIAL(info) << "request: " << path.c_str();
-
-    // Attempt to open the file
-    beast::error_code ec;
-    http::file_body::value_type body;
-    body.open( path.c_str(), beast::file_mode::scan, ec );
-
-    // Handle the case where the file doesn't exist
-    if( ec == beast::errc::no_such_file_or_directory )
-      return not_found(req.target());
-
-    // Handle an unknown error
-    if( ec )
-      return server_error(ec.message());
-
-    // Cache the size since we need it after the move
-    auto const size = body.size();
-
-    // Respond to HEAD request
-    if(req.method() == http::verb::head) {
-      http::response<http::empty_body> res{http::status::ok, req.version()};
-      res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-      res.set(http::field::content_type, mime_type(path));
-      res.content_length(size);
-      res.keep_alive(req.keep_alive());
-      return res;
-    }
-
-    // Respond to GET request
-    http::response<http::file_body> res{
-      std::piecewise_construct,
-      std::make_tuple(std::move(body)),
-      std::make_tuple(http::status::ok, req.version())
-    };
-
+  // Returns a bad request response
+  auto const bad_request =
+  [&request](beast::string_view why)
+  {
+    http::response<http::string_body> res{http::status::bad_request, request.version()};
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(http::field::content_type, mime_type(path));
-    res.content_length(size);
-    res.keep_alive(req.keep_alive());
+    res.set(http::field::content_type, "text/html");
+    res.keep_alive(request.keep_alive());
+    res.body() = std::string(why);
+    res.prepare_payload();
     return res;
+  };
+
+  // Returns a not found response
+  auto const not_found =
+  [&request](beast::string_view target)
+  {
+    http::response<http::string_body> res{http::status::not_found, request.version()};
+    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(http::field::content_type, "text/html");
+    res.keep_alive(request.keep_alive());
+    res.body() = "The resource '" + std::string(target) + "' was not found.";
+    res.prepare_payload();
+    return res;
+  };
+
+  // Returns a server error response
+  auto const server_error =
+  [&request](beast::string_view what)
+  {
+    http::response<http::string_body> response{http::status::internal_server_error, request.version()};
+    response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    response.set(http::field::content_type, "text/html");
+    response.keep_alive(request.keep_alive());
+    response.body() = "An error occurred: '" + std::string(what) + "'";
+    response.prepare_payload();
+    return response;
+  };
+
+  // Make sure we can handle the method
+  if( request.method() != http::verb::get &&
+      request.method() != http::verb::head
+    )
+    return bad_request( "Unknown HTTP-method" );
+
+  // Request path must be absolute and not contain "..".
+  if( request.target().empty() ||
+      request.target()[0] != '/' ||
+      request.target().find("..") != beast::string_view::npos
+    )
+    return bad_request( "Illegal request-target" );
+
+  // Build the path to the requested file
+  std::string path = path_cat( doc_root, request.target());
+  if (request.target().back() == '/')
+      path.append("index.html");
+
+  BOOST_LOG_TRIVIAL(info) << "request: " << path.c_str();
+
+  // Attempt to open the file
+  beast::error_code ec;
+  http::file_body::value_type body;
+  body.open( path.c_str(), beast::file_mode::scan, ec );
+
+  // Handle the case where the file doesn't exist
+  if( ec == beast::errc::no_such_file_or_directory )
+    return not_found( request.target() );
+
+  // Handle an unknown error
+  if( ec )
+    return server_error( ec.message() );
+
+  // Cache the size since we need it after the move
+  auto const size = body.size();
+
+  // Respond to HEAD request
+  if(request.method() == http::verb::head) {
+    http::response<http::empty_body> response{http::status::ok, request.version()};
+    response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+    response.set(http::field::content_type, mime_type(path));
+    response.content_length(size);
+    response.keep_alive(request.keep_alive());
+    return response;
+  }
+
+  // Respond to GET request
+  http::response<http::file_body> response{
+    std::piecewise_construct,
+    std::make_tuple( std::move( body ) ),
+    std::make_tuple( http::status::ok, request.version() )
+  };
+
+  response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+  response.set(http::field::content_type, mime_type( path ));
+  response.content_length( size );
+  response.keep_alive( request.keep_alive() );
+  return response;
 }
 
 template<typename Stream>
 net::awaitable<void, executor_type>
 run_websocket_session(
-    Stream& stream,
-    beast::flat_buffer& buffer,
-    http::request<http::string_body> req)
+  Stream& stream,
+  beast::flat_buffer& buffer,
+  http::request<http::string_body> req
+)
 {
-    auto cs = co_await net::this_coro::cancellation_state;
-    auto ws = websocket::stream<Stream&>{ stream };
 
-    // Set suggested timeout settings for the websocket
-    ws.set_option(
-        websocket::stream_base::timeout::suggested(beast::role_type::server));
+  auto cs = co_await net::this_coro::cancellation_state;
+  auto ws = websocket::stream<Stream&>{ stream };
 
-    // Set a decorator to change the Server of the handshake
-    ws.set_option(websocket::stream_base::decorator(
-        [](websocket::response_type& res)
-        {
-            res.set(
-                http::field::server,
-                std::string(BOOST_BEAST_VERSION_STRING) +
-                    " advanced-server-flex");
-        }));
+  // Set suggested timeout settings for the websocket
+  ws.set_option(
+    websocket::stream_base::timeout::suggested(beast::role_type::server));
 
-    // Accept the websocket handshake
-    co_await ws.async_accept(req);
-
-    while(!cs.cancelled())
+  // Set a decorator to change the Server of the handshake
+  ws.set_option(websocket::stream_base::decorator(
+    [](websocket::response_type& res)
     {
-        // Read a message
-        auto [ec, _] = co_await ws.async_read(buffer, net::as_tuple);
+        res.set(
+            http::field::server,
+            std::string(BOOST_BEAST_VERSION_STRING) +
+                " advanced-server-flex");
+    }));
 
-        if(ec == websocket::error::closed || ec == ssl::error::stream_truncated)
-            co_return;
+  // Accept the websocket handshake
+  co_await ws.async_accept(req);
 
-        if(ec)
-            throw boost::system::system_error{ ec };
+  while (!cs.cancelled()) {
+    // Read a message
+    auto [ec, _] = co_await ws.async_read(buffer, net::as_tuple);
 
-        // Echo the message back
-        ws.text(ws.got_text());
-        co_await ws.async_write(buffer.data());
+    if(ec == websocket::error::closed || ec == ssl::error::stream_truncated)
+        co_return;
 
-        // Clear the buffer
-        buffer.consume(buffer.size());
-    }
-
-    // A cancellation has been requested, gracefully close the session.
-    auto [ec] = co_await ws.async_close(
-        websocket::close_code::service_restart, net::as_tuple);
-
-    if(ec && ec != ssl::error::stream_truncated)
+    if(ec)
         throw boost::system::system_error{ ec };
+
+    // Echo the message back
+    ws.text(ws.got_text());
+    co_await ws.async_write(buffer.data());
+
+    // Clear the buffer
+    buffer.consume(buffer.size());
+  }
+
+  // A cancellation has been requested, gracefully close the session.
+  auto [ec] = co_await ws.async_close(
+    websocket::close_code::service_restart, net::as_tuple);
+
+  if(ec && ec != ssl::error::stream_truncated)
+    throw boost::system::system_error{ ec };
 }
 
 template<typename Stream>
@@ -213,7 +212,7 @@ run_session(
 {
   auto cs = co_await net::this_coro::cancellation_state;
 
-  while(!cs.cancelled() ) {
+  while ( !cs.cancelled() ) {
 
     http::request_parser<http::string_body> parser;
     parser.body_limit(10000);
@@ -221,10 +220,10 @@ run_session(
     auto [ec, _] =
       co_await http::async_read(stream, buffer, parser, net::as_tuple);
 
-    if(ec == http::error::end_of_stream)
+    if ( http::error::end_of_stream == ec )
       co_return;
 
-    if( websocket::is_upgrade(parser.get())) {
+    if ( websocket::is_upgrade(parser.get())) {
 
       // The websocket::stream uses its own timeout settings.
       beast::get_lowest_layer(stream).expires_never();
@@ -235,14 +234,14 @@ run_session(
       co_return;
     }
 
-    auto res = handle_request(doc_root, parser.release());
-    if(!res.keep_alive())
-    {
-        co_await beast::async_write(stream, std::move(res));
-        co_return;
+    auto response = handle_request( doc_root, parser.release() );
+
+    if( !response.keep_alive() ) {
+      co_await beast::async_write( stream, std::move(response) );
+      co_return;
     }
 
-    co_await beast::async_write(stream, std::move(res));
+    co_await beast::async_write( stream, std::move(response) );
   }
 }
 
@@ -281,9 +280,8 @@ detect_session(
       BOOST_LOG_TRIVIAL(info) << "ssl session name '" << servername << "'";
     }
     else {
-      BOOST_LOG_TRIVIAL(info) << "ssl session unnamed";
+      //BOOST_LOG_TRIVIAL(info) << "ssl session unnamed";
     }
-
 
     auto bytes_transferred = co_await ssl_stream.async_handshake(
       ssl::stream_base::server, buffer.data()
@@ -294,6 +292,7 @@ detect_session(
     co_await run_session( ssl_stream, buffer, doc_root );
 
     if( !ssl_stream.lowest_layer().is_open() )
+      //BOOST_LOG_TRIVIAL(info) << "ssl session closed (1)";
       co_return;
 
     // Gracefully close the stream
@@ -301,11 +300,11 @@ detect_session(
     if( ec && ec != ssl::error::stream_truncated )
       throw boost::system::system_error{ ec };
 
-    BOOST_LOG_TRIVIAL(info) << "ssl session closed";
+    //BOOST_LOG_TRIVIAL(info) << "ssl session closed (2)";
   }
   else {
 
-    BOOST_LOG_TRIVIAL(info) << "non-ssl session";
+    //BOOST_LOG_TRIVIAL(info) << "non-ssl session";
 
     co_await run_session(stream, buffer, doc_root);
 
@@ -362,7 +361,7 @@ listen(
               const auto result = s1.compare( 0, s1.size(), s2, 0, s1.size() );
               if ( 0 == result ) {}
               else {
-                std::cerr << "error (listen): " << e.what() << "\n";
+                BOOST_LOG_TRIVIAL(error) << "listen: " << e.what() << "\n";
               }
             }
           }
