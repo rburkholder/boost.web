@@ -12,14 +12,8 @@
 
 #include <boost/asio/ssl/context.hpp>
 
-/*  Load a signed certificate into the ssl context, and configure
-    the context for use with a server.
-
-    For this to work with the browser or operating system, it is
-    necessary to import the "Beast Test CA" certificate into
-    the local certificate store, browser, or operating system
-    depending on your environment Please see the documentation
-    accompanying the Beast certificate for more details.
+/* Load a signed certificate into the ssl context, and configure
+   the context for use with a server.
 */
 
 void

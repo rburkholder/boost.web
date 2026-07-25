@@ -14,8 +14,8 @@
 #include <openssl/tls1.h>
 
 #include <boost/asio/buffer.hpp>
-#include <boost/asio/ssl/context.hpp>
 
+#include "server_certificate.hpp"
 /*
     The certificate was generated from bash on Ubuntu (OpenSSL 1.1.1f) using:
 
@@ -34,9 +34,20 @@ std::string const dh =
     "-----END DH PARAMETERS-----\n";
 
 ssl_ctx_st* phandle;
-void ssl_callback_ctrl( SSL *ssl, int *ad, void *arg ) {
-  const char* name = SSL_get_servername( ssl, TLSEXT_NAMETYPE_host_name );
+
+static int ssl_callback_ctrl( SSL* ssl, int* ad, void* arg ) {
+
+  if ( ssl == nullptr ) {
+    return SSL_TLSEXT_ERR_NOACK;
+  }
+
+  const char* servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+  //ASSERT(servername && servername[0]);
+  if ( !servername || ( '\0' == servername[0] ) )
+    return SSL_TLSEXT_ERR_NOACK;
+
   //std::cout << "  ssl callback: " << name << std::endl;
+  return SSL_TLSEXT_ERR_OK;
 }
 
 void
@@ -46,7 +57,7 @@ load_server_certificate( boost::asio::ssl::context& ctx ) {
     [](std::size_t,
         boost::asio::ssl::context_base::password_purpose)
     {
-        return "test";
+      return "test";
     });
 
   phandle = ctx.native_handle();
