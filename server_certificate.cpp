@@ -33,9 +33,20 @@ std::string const dh =
   "QMUk26jPTIVTLfXmmwU0u8vUkpR7LQKkwwIBAg==\n"
     "-----END DH PARAMETERS-----\n";
 
-ssl_ctx_st* phandle;
+class local_ssl_ctx {
+} local_ssl_ctx_;
 
-static int ssl_callback_ctrl( SSL* ssl, int* ad, void* arg ) {
+// One way to make it thread-safe is to allocate one SSL_CTX() per certificate,
+// per thread (and always handle the same SSL and SSL_CTX objects from the same thread).
+// The other way is to set thread callbacks with CRYPTO_set_id_callback()
+// and CRYPTO_set_locking_callback(), in which case OpenSSL will make the right calls
+// to the locking callback to make SSL_set_SSL_CTX() thread-safe.
+
+// https://docs.openssl.org/master/man3/SSL_CTX_set_tlsext_servername_callback
+//long SSL_CTX_callback_ctrl(SSL_CTX *, int, void (*)(void));
+static long ssl_cb_tlsext_servername( SSL* ssl, int* ad, void* arg ) {
+
+  // *ad is 112
 
   if ( ssl == nullptr ) {
     return SSL_TLSEXT_ERR_NOACK;
@@ -60,8 +71,9 @@ load_server_certificate( boost::asio::ssl::context& ctx ) {
       return "test";
     });
 
-  phandle = ctx.native_handle();
-  SSL_CTX_set_tlsext_servername_callback( phandle, &ssl_callback_ctrl );
+  ssl_ctx_st* phandle = ctx.native_handle();
+  long r1 = SSL_CTX_set_tlsext_servername_callback( phandle, &ssl_cb_tlsext_servername ); // ctx, cb
+  long r2 = SSL_CTX_set_tlsext_servername_arg( phandle, &local_ssl_ctx_ );
 
   ctx.set_options(
     boost::asio::ssl::context::default_workarounds |
