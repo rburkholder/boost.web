@@ -3,6 +3,10 @@ cmake_minimum_required (VERSION 3.14)
 
 PROJECT(boost.web)
 
+if (POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,7 +26,7 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 #find_package(Boost 1.81.0 REQUIRED COMPONENTS program_options thread filesystem log)
 #find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup json REQUIRED )
-#find_package(Boost REQUIRED COMPONENTS log)
+find_package(Boost REQUIRED COMPONENTS log)
 
 set(
   file_hpp
@@ -64,7 +68,7 @@ target_link_directories(
 target_link_libraries(
   ${PROJECT_NAME}
     pthread
-    #${Boost_LIBRARIES}
+    ${Boost_LIBRARIES}
     crypto
     ssl
   )

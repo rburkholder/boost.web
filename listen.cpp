@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <boost/log/trivial.hpp>
+
 #include <boost/beast/ssl.hpp>
 
 #include "listen.hpp"
@@ -105,7 +107,7 @@ handle_request(
     if(req.target().back() == '/')
         path.append("index.html");
 
-    std::cout << "request: " << path.c_str() << std::endl;
+    BOOST_LOG_TRIVIAL(info) << "request: " << path.c_str();
 
     // Attempt to open the file
     beast::error_code ec;
@@ -272,7 +274,16 @@ detect_session(
 
     ssl::stream<stream_type> ssl_stream{ std::move( stream ), ctx };
 
-    //auto handle = ssl_stream.native_handle();   // ssl_st
+    auto handle = ssl_stream.native_handle();   // ssl_st
+    const char* servername = SSL_get_servername( handle, TLSEXT_NAMETYPE_host_name );
+
+    if ( nullptr != servername ) {
+      BOOST_LOG_TRIVIAL(info) << "ssl session name '" << servername << "'";
+    }
+    else {
+      BOOST_LOG_TRIVIAL(info) << "ssl session unnamed";
+    }
+
 
     auto bytes_transferred = co_await ssl_stream.async_handshake(
       ssl::stream_base::server, buffer.data()
@@ -287,11 +298,15 @@ detect_session(
 
     // Gracefully close the stream
     auto [ec] = co_await ssl_stream.async_shutdown(net::as_tuple);
-    if(ec && ec != ssl::error::stream_truncated)
-        throw boost::system::system_error{ ec };
+    if( ec && ec != ssl::error::stream_truncated )
+      throw boost::system::system_error{ ec };
+
+    BOOST_LOG_TRIVIAL(info) << "ssl session closed";
   }
-  else
-  {
+  else {
+
+    BOOST_LOG_TRIVIAL(info) << "non-ssl session";
+
     co_await run_session(stream, buffer, doc_root);
 
     if( !stream.socket().is_open() )
@@ -309,6 +324,8 @@ listen(
   beast::string_view doc_root
 )
 {
+  // BOOST_LOG_TRIVIAL(info) << "starting listen" << std::endl; // only a 1 count
+
   auto cs       = co_await net::this_coro::cancellation_state;
   auto executor = co_await net::this_coro::executor;
   auto acceptor = acceptor_type{ executor, endpoint };
@@ -331,7 +348,7 @@ listen(
       throw boost::system::system_error{ ec };
 
     net::co_spawn(
-      std::move(socket_executor),
+      std::move( socket_executor ),
       detect_session( stream_type{ std::move( socket ) }, ctx, doc_root ),
       task_group.adapt(
         []( std::exception_ptr e ) {

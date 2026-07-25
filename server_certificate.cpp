@@ -13,6 +13,8 @@
 
 #include <openssl/tls1.h>
 
+#include <boost/log/trivial.hpp>
+
 #include <boost/asio/buffer.hpp>
 
 #include "server_certificate.hpp"
@@ -48,16 +50,18 @@ static long ssl_cb_tlsext_servername( SSL* ssl, int* ad, void* arg ) {
 
   // *ad is 112
 
-  if ( ssl == nullptr ) {
+  if ( nullptr == ssl ) {
+    BOOST_LOG_TRIVIAL(info) << "ctx: no ssl";
     return SSL_TLSEXT_ERR_NOACK;
   }
 
-  const char* servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+  const char* servername = SSL_get_servername( ssl, TLSEXT_NAMETYPE_host_name );
   //ASSERT(servername && servername[0]);
-  if ( !servername || ( '\0' == servername[0] ) )
+  if ( nullptr == servername || ( '\0' == servername[0] ) )
+    BOOST_LOG_TRIVIAL(info) << "ctx: no name";
     return SSL_TLSEXT_ERR_NOACK;
 
-  //std::cout << "  ssl callback: " << name << std::endl;
+  BOOST_LOG_TRIVIAL(info) << "ctx: '" << servername << "'";
   return SSL_TLSEXT_ERR_OK;
 }
 
