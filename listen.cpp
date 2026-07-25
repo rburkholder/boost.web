@@ -50,9 +50,9 @@ handle_request(
 {
   // Returns a bad request response
   auto const bad_request =
-  [&request](beast::string_view why)
+  [&request]( beast::string_view why )
   {
-    http::response<http::string_body> res{http::status::bad_request, request.version()};
+    http::response<http::string_body> res{ http::status::bad_request, request.version() };
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(http::field::content_type, "text/html");
     res.keep_alive(request.keep_alive());
@@ -63,9 +63,9 @@ handle_request(
 
   // Returns a not found response
   auto const not_found =
-  [&request](beast::string_view target)
+  [&request]( beast::string_view target )
   {
-    http::response<http::string_body> res{http::status::not_found, request.version()};
+    http::response<http::string_body> res{ http::status::not_found, request.version() };
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(http::field::content_type, "text/html");
     res.keep_alive(request.keep_alive());
@@ -78,7 +78,7 @@ handle_request(
   auto const server_error =
   [&request](beast::string_view what)
   {
-    http::response<http::string_body> response{http::status::internal_server_error, request.version()};
+    http::response<http::string_body> response{ http::status::internal_server_error, request.version() };
     response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     response.set(http::field::content_type, "text/html");
     response.keep_alive(request.keep_alive());
@@ -90,22 +90,26 @@ handle_request(
   // Make sure we can handle the method
   if( request.method() != http::verb::get &&
       request.method() != http::verb::head
-    )
+  ) {
+    BOOST_LOG_TRIVIAL(warning) << "unknown method: " << request.method() << ',' << request.target();
     return bad_request( "Unknown HTTP-method" );
+  }
 
   // Request path must be absolute and not contain "..".
   if( request.target().empty() ||
       request.target()[0] != '/' ||
       request.target().find("..") != beast::string_view::npos
-    )
+  ) {
+    BOOST_LOG_TRIVIAL(warning) << "illegal target: " << request.target();
     return bad_request( "Illegal request-target" );
+  }
 
   // Build the path to the requested file
-  std::string path = path_cat( doc_root, request.target());
+  std::string path = path_cat( doc_root, request.target() );
   if (request.target().back() == '/')
       path.append("index.html");
 
-  BOOST_LOG_TRIVIAL(info) << "request: " << path.c_str();
+  BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path.c_str() << "'";
 
   // Attempt to open the file
   beast::error_code ec;
@@ -164,27 +168,29 @@ run_websocket_session(
     websocket::stream_base::timeout::suggested(beast::role_type::server));
 
   // Set a decorator to change the Server of the handshake
-  ws.set_option(websocket::stream_base::decorator(
-    [](websocket::response_type& res)
-    {
+  ws.set_option(
+    websocket::stream_base::decorator(
+      [](websocket::response_type& res) {
         res.set(
-            http::field::server,
-            std::string(BOOST_BEAST_VERSION_STRING) +
-                " advanced-server-flex");
-    }));
+          http::field::server,
+          std::string(BOOST_BEAST_VERSION_STRING) +
+              " advanced-server-flex");
+      }
+    )
+  );
 
   // Accept the websocket handshake
   co_await ws.async_accept(req);
 
-  while (!cs.cancelled()) {
+  while ( !cs.cancelled() ) {
     // Read a message
     auto [ec, _] = co_await ws.async_read(buffer, net::as_tuple);
 
     if(ec == websocket::error::closed || ec == ssl::error::stream_truncated)
-        co_return;
+      co_return;
 
     if(ec)
-        throw boost::system::system_error{ ec };
+      throw boost::system::system_error{ ec };
 
     // Echo the message back
     ws.text(ws.got_text());
@@ -236,7 +242,7 @@ run_session(
 
     auto response = handle_request( doc_root, parser.release() );
 
-    if( !response.keep_alive() ) {
+    if ( !response.keep_alive() ) {
       co_await beast::async_write( stream, std::move(response) );
       co_return;
     }
@@ -361,7 +367,7 @@ listen(
               const auto result = s1.compare( 0, s1.size(), s2, 0, s1.size() );
               if ( 0 == result ) {}
               else {
-                BOOST_LOG_TRIVIAL(error) << "listen: " << e.what() << "\n";
+                BOOST_LOG_TRIVIAL(error) << "listen: " << e.what();
               }
             }
           }
