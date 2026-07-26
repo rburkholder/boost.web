@@ -316,25 +316,32 @@ detect_session(
 
   stream.expires_after(std::chrono::seconds(30));
 
+  {
+    auto ep( stream.socket().remote_endpoint() );
+    BOOST_LOG_TRIVIAL(info) << "ep: " << ep.address() << ':' << ep.port();
+  }
+
   if( co_await beast::async_detect_ssl( stream, buffer ) ) {
 
     ssl::stream<stream_type> ssl_stream{ std::move( stream ), ctx };
-
-    auto handle = ssl_stream.native_handle();   // ssl_st
-    const char* servername = SSL_get_servername( handle, TLSEXT_NAMETYPE_host_name );
-
-    if ( nullptr != servername ) {
-      BOOST_LOG_TRIVIAL(info) << "ssl session name '" << servername << "'";
-    }
-    else {
-      //BOOST_LOG_TRIVIAL(info) << "ssl session unnamed";
-    }
 
     auto bytes_transferred = co_await ssl_stream.async_handshake(
       ssl::stream_base::server, buffer.data()
     );
 
     buffer.consume( bytes_transferred );
+
+    { // attempt ssl server name query
+      auto handle = ssl_stream.native_handle();   // ssl_st
+      const char* servername = SSL_get_servername( handle, TLSEXT_NAMETYPE_host_name );
+
+      if ( nullptr != servername ) {
+        BOOST_LOG_TRIVIAL(info) << "ssl session name '" << servername << "'";
+      }
+      else {
+        //BOOST_LOG_TRIVIAL(info) << "ssl session unnamed";
+      }
+    }
 
     co_await run_session( ssl_stream, buffer, doc_root );
 
@@ -353,7 +360,7 @@ detect_session(
 
     //BOOST_LOG_TRIVIAL(info) << "non-ssl session";
 
-    co_await run_session(stream, buffer, doc_root);
+    co_await run_session( stream, buffer, doc_root );
 
     if( !stream.socket().is_open() )
       co_return;
