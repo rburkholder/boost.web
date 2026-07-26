@@ -128,7 +128,7 @@ handle_request(
   }
 
   // Build the path to the requested file
-  if ( '/' == request.target().back() )
+  if ( '/' == path.back() )
     path.append( "index.html" );
 
   BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path << "', '" << query << "'";
