@@ -120,17 +120,16 @@ handle_request(
   std::string path;
   std::string query;
   if ( url.has_value() ) {
-    path = url->path();
+    path = path_cat( doc_root, url->path() );
     query = url->query();
   }
   else {
-    path = request.target();
+    path = path_cat( doc_root, request.target() );
   }
 
   // Build the path to the requested file
-  path = path_cat( doc_root, path );
-  if ( request.target().back() == '/' )
-    path.append("index.html");
+  if ( '/' == request.target().back() )
+    path.append( "index.html" );
 
   BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path << "', '" << query << "'";
 
