@@ -26,7 +26,7 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 #find_package(Boost 1.81.0 REQUIRED COMPONENTS program_options thread filesystem log)
 #find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup json REQUIRED )
-find_package(Boost REQUIRED COMPONENTS log)
+find_package(Boost REQUIRED COMPONENTS log url)
 
 set(
   file_hpp

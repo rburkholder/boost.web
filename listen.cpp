@@ -1,5 +1,7 @@
 #include <boost/log/trivial.hpp>
 
+#include <boost/url.hpp>
+
 #include <boost/beast/ssl.hpp>
 
 #include "listen.hpp"
@@ -99,7 +101,7 @@ handle_request(
   if( request.method() != http::verb::get &&
       request.method() != http::verb::head
   ) {
-    BOOST_LOG_TRIVIAL(warning) << "unknown method: " << request.method() << ',' << request.target();
+    BOOST_LOG_TRIVIAL(warning) << "unknown method: " << request.method() << ',' << request.has_content_length();
     return bad_request( request, "Unknown HTTP-method" );
   }
 
@@ -112,12 +114,25 @@ handle_request(
     return bad_request( request, "Illegal request-target" );
   }
 
+  auto target = request.target();
+  boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
+
+  std::string path;
+  std::string query;
+  if ( url.has_value() ) {
+    path = url->path();
+    query = url->query();
+  }
+  else {
+    path = request.target();
+  }
+
   // Build the path to the requested file
-  std::string path = path_cat( doc_root, request.target() );
-  if (request.target().back() == '/')
+  path = path_cat( doc_root, path );
+  if ( request.target().back() == '/' )
     path.append("index.html");
 
-  BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path.c_str() << "'";
+  BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path << "', '" << query << "'";
 
   // Attempt to open the file
   beast::error_code ec;
@@ -146,6 +161,7 @@ handle_request(
     }
     else {
       // Handle an unknown error
+
       return server_error( request, ec.message() );
     }
   }
