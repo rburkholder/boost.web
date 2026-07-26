@@ -124,30 +124,31 @@ handle_request(
   http::file_body::value_type body;
   body.open( path.c_str(), beast::file_mode::scan, ec );
 
-  // Handle the case where the file doesn't exist
-  if( ec == beast::errc::no_such_file_or_directory ) {
-    if ( 0 == request.target().compare( "/robots.txt" ) ) {
-      static const std::string content( "User-agent: *\nAllow: /\n" );
-      http::response<http::string_body> response{
-        std::piecewise_construct,
-        std::make_tuple( content ),
-        std::make_tuple( http::status::ok, request.version() )
-      };
-      response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-      response.set(http::field::content_type, mime_type( path ));
-      response.content_length( content.size() );
-      response.keep_alive( request.keep_alive() );
-      return response;
+  if( ec ) {
+    // Handle the case where the file doesn't exist
+    if( ec == beast::errc::no_such_file_or_directory ) {
+      if ( 0 == request.target().compare( "/robots.txt" ) ) {
+        static const std::string content( "User-agent: *\nAllow: /\n" );
+        http::response<http::string_body> response{
+          std::piecewise_construct,
+          std::make_tuple( content ),
+          std::make_tuple( http::status::ok, request.version() )
+        };
+        response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        response.set(http::field::content_type, mime_type( path ));
+        response.content_length( content.size() );
+        response.keep_alive( request.keep_alive() );
+        return response;
+      }
+      else {
+        return not_found( request, request.target() );
+      }
     }
     else {
-      return not_found( request, request.target() );
+      // Handle an unknown error
+      return server_error( request, ec.message() );
     }
-
   }
-
-  // Handle an unknown error
-  if( ec )
-    return server_error( request, ec.message() );
 
   // Cache the size since we need it after the move
   auto const size = body.size();
