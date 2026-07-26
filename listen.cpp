@@ -105,33 +105,27 @@ handle_request(
     return bad_request( request, "Unknown HTTP-method" );
   }
 
+  boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
+  if ( url.has_error() ) {
+    return server_error( request, request.target() );
+  }
+
+  const auto path_raw( url->path() );
   // Request path must be absolute and not contain "..".
-  if( request.target().empty() ||
-      request.target()[0] != '/' ||
-      request.target().find("..") != beast::string_view::npos
+  if( path_raw.empty() ||
+      path_raw[0] != '/' ||
+      path_raw.find("..") != beast::string_view::npos
   ) {
-    BOOST_LOG_TRIVIAL(warning) << "illegal target: " << request.target();
+    BOOST_LOG_TRIVIAL(warning) << "illegal target: " << path_raw;
     return bad_request( request, "Illegal request-target" );
   }
 
-  auto target = request.target();
-  boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
-
-  std::string path;
-  std::string query;
-  if ( url.has_value() ) {
-    path = path_cat( doc_root, url->path() );
-    query = url->query();
-  }
-  else {
-    path = path_cat( doc_root, request.target() );
-  }
-
-  // Build the path to the requested file
-  if ( '/' == path.back() )
+  std::string path = path_cat( doc_root, path_raw );
+  if ( '/' == path.back() ) {
     path.append( "index.html" );
+  }
 
-  BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path << "', '" << query << "'";
+  BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path << "', '" << url->query() << "'";
 
   // Attempt to open the file
   beast::error_code ec;
@@ -160,7 +154,6 @@ handle_request(
     }
     else {
       // Handle an unknown error
-
       return server_error( request, ec.message() );
     }
   }
@@ -336,10 +329,10 @@ detect_session(
       const char* servername = SSL_get_servername( handle, TLSEXT_NAMETYPE_host_name );
 
       if ( nullptr != servername ) {
-        BOOST_LOG_TRIVIAL(info) << "ssl session name '" << servername << "'";
+        BOOST_LOG_TRIVIAL(info) << "ssl name '" << servername << "'";
       }
       else {
-        //BOOST_LOG_TRIVIAL(info) << "ssl session unnamed";
+        BOOST_LOG_TRIVIAL(info) << "ssl unnamed";
       }
     }
 
