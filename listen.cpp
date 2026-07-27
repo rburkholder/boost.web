@@ -105,12 +105,19 @@ handle_request(
   if( request.method() != http::verb::get &&
       request.method() != http::verb::head
   ) {
-    BOOST_LOG_TRIVIAL(warning) << "unknown method: " << request.method() << ',' << request.has_content_length();
+    BOOST_LOG_TRIVIAL(warning)
+      << state.endpoint.address() << ':' << state.endpoint.port() << " "
+      << "unknown method: '"
+      << request.method() << "'," << request.has_content_length()
+      ;
     return bad_request( request, "Unknown HTTP-method" );
   }
 
   boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
   if ( url.has_error() ) {
+    BOOST_LOG_TRIVIAL(warning)
+      << state.endpoint.address() << ':' << state.endpoint.port() << " "
+      << "server error: " << request.target();
     return server_error( request, request.target() );
   }
 
@@ -120,7 +127,10 @@ handle_request(
       path_raw[0] != '/' ||
       path_raw.find("..") != beast::string_view::npos
   ) {
-    BOOST_LOG_TRIVIAL(warning) << "illegal target: " << path_raw;
+    BOOST_LOG_TRIVIAL(warning)
+      << state.endpoint.address() << ':' << state.endpoint.port() << " "
+      << "illegal target: "
+      << path_raw;
     return bad_request( request, "Illegal request-target" );
   }
 
@@ -130,8 +140,8 @@ handle_request(
   }
 
   BOOST_LOG_TRIVIAL(info)
+    << state.endpoint.address() << ':' << state.endpoint.port() << " "
     << "request: "
-    << state.endpoint.address() << ':' << state.endpoint.port() << ", "
     << ( state.bSsl ? ( ( nullptr == state.ssl_name ) ? "unnamed" : state.ssl_name ) : ( "http") ) << ", "
     << request.method() << ", '" << request.target() << "', '" << path << "', '" << url->query() << "'";
 
@@ -282,14 +292,22 @@ run_session(
       co_return;
     }
 
-    auto response = handle_request( state, parser.release() );
-
-    if ( !response.keep_alive() ) {
-      co_await beast::async_write( stream, std::move(response) );
+    auto request( parser.release() );
+    if ( http::verb::unknown == request.method() ) {
+      BOOST_LOG_TRIVIAL(info)
+        << state.endpoint.address() << ':' << state.endpoint.port() << " unknown request"; // probably ssl session timeout
       co_return;
     }
+    else {
+      auto response = handle_request( state, std::move( request ) );
 
-    co_await beast::async_write( stream, std::move(response) );
+      if ( !response.keep_alive() ) {
+        co_await beast::async_write( stream, std::move( response ) );
+        co_return;
+      }
+
+      co_await beast::async_write( stream, std::move( response ) );
+    }
   }
 }
 
@@ -342,14 +360,13 @@ detect_session(
 
     // Gracefully close the stream
     auto [ec] = co_await ssl_stream.async_shutdown(net::as_tuple);
-    if( ec && ec != ssl::error::stream_truncated )
+    if( ec && ec != ssl::error::stream_truncated ) {
       throw boost::system::system_error{ ec };
+    }
 
     //BOOST_LOG_TRIVIAL(info) << "ssl session closed (2)";
   }
   else {
-
-    //BOOST_LOG_TRIVIAL(info) << "non-ssl session";
 
     state.bSsl = false;
     co_await run_session( stream, buffer, state );
@@ -401,14 +418,17 @@ listen(
             try {
               std::rethrow_exception(e);
             }
-            catch( std::exception& e ) {
+            catch( boost::system::system_error& ec ) {
               static const std::string s1( "The socket was closed due to a timeout" );
-              const std::string s2( e.what() );
+              const std::string& s2( ec.what() );
               const auto result = s1.compare( 0, s1.size(), s2, 0, s1.size() );
               if ( 0 == result ) {}
               else {
-                BOOST_LOG_TRIVIAL(error) << "listen: " << e.what();
+                BOOST_LOG_TRIVIAL(error) << "listen (1) " << ec.code() << ": " << ec.what();
               }
+            }
+            catch( std::exception& e ) {
+              BOOST_LOG_TRIVIAL(error) << "listen (2): " << e.what();
             }
           }
         }
