@@ -39,15 +39,6 @@ path_cat(
   return result;
 }
 
-struct state {
-  bool bSsl;
-  net::ip::tcp::endpoint endpoint;
-  beast::string_view doc_root;
-  state()
-  : bSsl( true )
-  {}
-};
-
 using response_t = http::response<http::string_body>;
 
 // Returns a bad request response
@@ -86,13 +77,26 @@ response_t server_error( http::request<Body, http::basic_fields<Allocator>>& req
   return response;
 };
 
+struct state_t {
+
+  bool bSsl;
+  const char* ssl_name;
+  net::ip::tcp::endpoint endpoint;
+  beast::string_view doc_root;
+
+  state_t(): bSsl( true ), ssl_name( nullptr ) {}
+  state_t( boost::string_view doc_root_, net::ip::tcp::endpoint endpoint_ )
+  : bSsl( true ), ssl_name( nullptr )
+  , doc_root( doc_root_ ), endpoint( endpoint_ ) {}
+};
+
 // Return a response for the given request.
 // The concrete type of the response message (which depends on the
 // request), is type-erased in message_generator.
 template<class Body, class Allocator>
 http::message_generator
 handle_request(
-  beast::string_view doc_root,
+  state_t state,
   http::request<Body, http::basic_fields<Allocator>>&& request
 )
 {
@@ -120,12 +124,16 @@ handle_request(
     return bad_request( request, "Illegal request-target" );
   }
 
-  std::string path = path_cat( doc_root, path_raw );
+  std::string path = path_cat( state.doc_root, path_raw );
   if ( '/' == path.back() ) {
     path.append( "index.html" );
   }
 
-  BOOST_LOG_TRIVIAL(info) << "request: " << request.method() << ", '" << request.target() << "', '" << path << "', '" << url->query() << "'";
+  BOOST_LOG_TRIVIAL(info)
+    << "request: "
+    << state.endpoint.address() << ':' << state.endpoint.port() << ", "
+    << ( state.bSsl ? ( ( nullptr == state.ssl_name ) ? "unnamed" : state.ssl_name ) : ( "http") ) << ", "
+    << request.method() << ", '" << request.target() << "', '" << path << "', '" << url->query() << "'";
 
   // Attempt to open the file
   beast::error_code ec;
@@ -247,7 +255,7 @@ net::awaitable<void, executor_type>
 run_session(
   Stream& stream,
   beast::flat_buffer& buffer,
-  beast::string_view doc_root
+  state_t state
 )
 {
   auto cs = co_await net::this_coro::cancellation_state;
@@ -258,7 +266,7 @@ run_session(
     parser.body_limit(10000);
 
     auto [ec, _] =
-      co_await http::async_read(stream, buffer, parser, net::as_tuple);
+      co_await http::async_read( stream, buffer, parser, net::as_tuple );
 
     if ( http::error::end_of_stream == ec )
       co_return;
@@ -274,7 +282,7 @@ run_session(
       co_return;
     }
 
-    auto response = handle_request( doc_root, parser.release() );
+    auto response = handle_request( state, parser.release() );
 
     if ( !response.keep_alive() ) {
       co_await beast::async_write( stream, std::move(response) );
@@ -309,10 +317,7 @@ detect_session(
 
   stream.expires_after(std::chrono::seconds(30));
 
-  {
-    auto ep( stream.socket().remote_endpoint() );
-    BOOST_LOG_TRIVIAL(info) << "ep: " << ep.address() << ':' << ep.port();
-  }
+  state_t state( doc_root, stream.socket().remote_endpoint() );
 
   if( co_await beast::async_detect_ssl( stream, buffer ) ) {
 
@@ -326,17 +331,10 @@ detect_session(
 
     { // attempt ssl server name query
       auto handle = ssl_stream.native_handle();   // ssl_st
-      const char* servername = SSL_get_servername( handle, TLSEXT_NAMETYPE_host_name );
-
-      if ( nullptr != servername ) {
-        BOOST_LOG_TRIVIAL(info) << "ssl name '" << servername << "'";
-      }
-      else {
-        BOOST_LOG_TRIVIAL(info) << "ssl unnamed";
-      }
+      state.ssl_name = SSL_get_servername( handle, TLSEXT_NAMETYPE_host_name );
     }
 
-    co_await run_session( ssl_stream, buffer, doc_root );
+    co_await run_session( ssl_stream, buffer, state );
 
     if( !ssl_stream.lowest_layer().is_open() )
       //BOOST_LOG_TRIVIAL(info) << "ssl session closed (1)";
@@ -353,7 +351,8 @@ detect_session(
 
     //BOOST_LOG_TRIVIAL(info) << "non-ssl session";
 
-    co_await run_session( stream, buffer, doc_root );
+    state.bSsl = false;
+    co_await run_session( stream, buffer, state );
 
     if( !stream.socket().is_open() )
       co_return;
