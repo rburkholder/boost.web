@@ -238,7 +238,7 @@ run_websocket_session(
     // Read a message
     auto [ec, _] = co_await ws.async_read(buffer, net::as_tuple);
 
-    if(ec == websocket::error::closed || ec == ssl::error::stream_truncated)
+    if( ( ec == websocket::error::closed ) || ( ec == ssl::error::stream_truncated ) )
       co_return;
 
     if(ec)
@@ -249,14 +249,14 @@ run_websocket_session(
     co_await ws.async_write(buffer.data());
 
     // Clear the buffer
-    buffer.consume(buffer.size());
+    buffer.consume( buffer.size() );
   }
 
   // A cancellation has been requested, gracefully close the session.
   auto [ec] = co_await ws.async_close(
     websocket::close_code::service_restart, net::as_tuple);
 
-  if(ec && ec != ssl::error::stream_truncated)
+  if( ec && ( ec != ssl::error::stream_truncated ) )
     throw boost::system::system_error{ ec };
 }
 
@@ -292,7 +292,16 @@ run_session(
       co_return;
     }
 
+    BOOST_LOG_TRIVIAL(trace) << "----------";
+
     auto request( parser.release() );
+    for ( auto b = request.begin(); b != request.end(); b++ ) {
+      BOOST_LOG_TRIVIAL(trace) << "field: " << b->name() << '=' << b->value();
+    }
+
+    BOOST_LOG_TRIVIAL(trace)
+      << "body: '" << request.body() << "'";
+
     if ( http::verb::unknown == request.method() ) {
       BOOST_LOG_TRIVIAL(info)
         << state.endpoint.address() << ':' << state.endpoint.port() << " unknown request"; // probably ssl session timeout
@@ -360,7 +369,7 @@ detect_session(
 
     // Gracefully close the stream
     auto [ec] = co_await ssl_stream.async_shutdown(net::as_tuple);
-    if( ec && ec != ssl::error::stream_truncated ) {
+    if( ec && ( ec != ssl::error::stream_truncated ) ) {
       throw boost::system::system_error{ ec };
     }
 
