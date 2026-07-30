@@ -153,6 +153,7 @@ handle_request(
   if( ec ) {
     // Handle the case where the file doesn't exist
     if( ec == beast::errc::no_such_file_or_directory ) {
+      // similar for ads.txt, sitemap.xml
       if ( 0 == request.target().compare( "/robots.txt" ) ) {
         static const std::string content( "User-agent: *\nAllow: /\n" );
         http::response<http::string_body> response{
@@ -295,19 +296,36 @@ run_session(
     BOOST_LOG_TRIVIAL(trace) << "----------";
 
     auto request( parser.release() );
-    for ( auto b = request.begin(); b != request.end(); b++ ) {
-      BOOST_LOG_TRIVIAL(trace) << "field: " << b->name() << '=' << b->value();
-    }
-
-    BOOST_LOG_TRIVIAL(trace)
-      << "body: '" << request.body() << "'";
 
     if ( http::verb::unknown == request.method() ) {
+      BOOST_LOG_TRIVIAL(trace) << "request: '" << request << "'";
       BOOST_LOG_TRIVIAL(info)
         << state.endpoint.address() << ':' << state.endpoint.port() << " unknown request"; // probably ssl session timeout
       co_return;
     }
     else {
+      //bool u( false );
+      for ( auto b = request.begin(); b != request.end(); b++ ) {
+        if ( beast::http::field::unknown == b->name() ) {
+        BOOST_LOG_TRIVIAL(trace) << "fieldu: " << b->name_string() << '=' << b->value();
+        // example:
+        // fieldu: x-openai-host-hash=53160607
+        // field: From=oai-searchbot(at)openai.com
+        }
+        else {
+          BOOST_LOG_TRIVIAL(trace) << "field: " << b->name() << '=' << b->value();
+        }
+        // NOTE: will need to find the enum / name lookup table
+      }
+
+      BOOST_LOG_TRIVIAL(trace)
+        << "body: '" << request.body() << "'";
+
+      //if ( u ) { // try to determine unknown fields
+      //  BOOST_LOG_TRIVIAL(trace)
+      //    << "request: '" << request << "'";
+      //}
+
       auto response = handle_request( state, std::move( request ) );
 
       if ( !response.keep_alive() ) {
