@@ -106,18 +106,22 @@ handle_request(
 )
 {
 
-  // Make sure we can handle the method
-  if( ( http::verb::get  != request.method() )  &&
-      ( http::verb::head != request.method() )
-  ) {
-    BOOST_LOG_TRIVIAL(warning)
-      << state.endpoint.address() << ':' << state.endpoint.port() << " "
-      << "unknown method: '"
-      << request.method() << "'," << request.has_content_length()
-      ;
-    return bad_request( request, "Unknown HTTP-method", state );
+  switch ( request.method() ) {
+    case http::verb::get:
+    case http::verb::head:
+    case http::verb::post:
+      // handle these further down
+      break;
+    default:
+      BOOST_LOG_TRIVIAL(warning)
+        << state.endpoint.address() << ':' << state.endpoint.port() << " "
+        << "unknown method: '"
+        << request.method() << "'," << request.has_content_length()
+        ;
+      return bad_request( request, "Unknown HTTP-method", state );
   }
 
+  // ensure properly formed URL
   boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
   if ( url.has_error() ) {
     BOOST_LOG_TRIVIAL(warning)
@@ -126,6 +130,7 @@ handle_request(
     return server_error( request, request.target(), state );
   }
 
+  // ensure properly formatted url path
   const auto path_raw( url->path() );
   // Request path must be absolute and not contain "..".
   if( path_raw.empty() ||
@@ -139,11 +144,13 @@ handle_request(
     return bad_request( request, "Illegal request-target", state );
   }
 
+  // assign root of content directory, use index.html in each directory
   std::string path = path_cat( state.doc_root, path_raw );
   if ( '/' == path.back() ) {
     path.append( "index.html" );
   }
 
+  // log the action
   BOOST_LOG_TRIVIAL(info)
     << state.endpoint.address() << ':' << state.endpoint.port() << " "
     << "request: "
@@ -185,28 +192,40 @@ handle_request(
   // Cache the size since we need it after the move
   auto const size = body.size();
 
-  // Respond to HEAD request with empty body
-  if ( http::verb::head == request.method() ) {
-    http::response<http::empty_body> response{ http::status::ok, request.version() };
-    response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-    response.set( http::field::content_type, mime_type( path ) );
-    response.content_length( size );
-    response.keep_alive( request.keep_alive() );
-    return response;
+  switch ( request.method() ) {
+    case http::verb::post:
+      //break;  // use get for now
+    case http::verb::get:
+      {
+        // Respond to GET/POST request
+        http::response<http::file_body> response{
+          std::piecewise_construct,
+          std::make_tuple( std::move( body ) ),
+          std::make_tuple( http::status::ok, request.version() )
+        };
+
+        response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+        response.set( http::field::content_type, mime_type( path ) );
+        response.content_length( size );
+        response.keep_alive( request.keep_alive() );
+        return response;
+      }
+      break;
+    case http::verb::head:
+      // Respond to HEAD request with empty body
+      {
+        http::response<http::empty_body> response{ http::status::ok, request.version() };
+        response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+        response.set( http::field::content_type, mime_type( path ) );
+        response.content_length( size );
+        response.keep_alive( request.keep_alive() );
+        return response;
+      }
+      break;
+    default:
+      assert( false );  // should be unreachable
+      break;
   }
-
-  // Respond to GET request
-  http::response<http::file_body> response{
-    std::piecewise_construct,
-    std::make_tuple( std::move( body ) ),
-    std::make_tuple( http::status::ok, request.version() )
-  };
-
-  response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-  response.set( http::field::content_type, mime_type( path ) );
-  response.content_length( size );
-  response.keep_alive( request.keep_alive() );
-  return response;
 }
 
 template<typename Stream>
