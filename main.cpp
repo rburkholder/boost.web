@@ -42,6 +42,7 @@
 #include "listen.hpp"
 #include "server_certificate.hpp"
 #include "task_group.hpp"
+#include "handle_method.hpp"
 
 namespace net       = boost::asio;
 namespace ssl       = boost::asio::ssl;
@@ -96,10 +97,12 @@ main( int argc, char* argv[] )
   // Track coroutines
   task_group task_group{ ioc.get_executor() };
 
+  method_handlers handlers;
+
   // Create and launch a listening coroutine
   net::co_spawn(
     net::make_strand(ioc),
-    listen( task_group, ctx, endpoint, doc_root ),
+    listen( task_group, ctx, endpoint, handlers, doc_root ),
     task_group.adapt(
       []( std::exception_ptr e ) {
         if( e ) {

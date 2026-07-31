@@ -44,7 +44,7 @@ using response_t = http::response<http::string_body>;
 // Returns a bad request response
 template<class Body, class Allocator>
 response_t bad_request( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view why ) {
-  http::response<http::string_body> response{ http::status::bad_request, request.version() };
+  response_t response{ http::status::bad_request, request.version() };
   response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   response.set(http::field::content_type, "text/html");
   response.keep_alive( request.keep_alive() );
@@ -56,7 +56,7 @@ response_t bad_request( http::request<Body, http::basic_fields<Allocator>>& requ
 // Returns a not found response
 template<class Body, class Allocator>
 response_t not_found( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view target ) {
-  http::response<http::string_body> response{ http::status::not_found, request.version() };
+  response_t response{ http::status::not_found, request.version() };
   response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   response.set(http::field::content_type, "text/html");
   response.keep_alive( request.keep_alive() );
@@ -68,7 +68,7 @@ response_t not_found( http::request<Body, http::basic_fields<Allocator>>& reques
 // Returns a server error response
 template<class Body, class Allocator>
 response_t server_error( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view what ) {
-  http::response<http::string_body> response{ http::status::internal_server_error, request.version() };
+  response_t response{ http::status::internal_server_error, request.version() };
   response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
   response.set(http::field::content_type, "text/html");
   response.keep_alive( request.keep_alive() );
@@ -82,12 +82,14 @@ struct state_t {
   bool bSsl;
   const char* ssl_name;
   net::ip::tcp::endpoint endpoint;
+  method_handlers& handlers;
   beast::string_view doc_root;
 
-  state_t(): bSsl( true ), ssl_name( nullptr ) {}
-  state_t( boost::string_view doc_root_, net::ip::tcp::endpoint endpoint_ )
+  state_t( boost::string_view doc_root_, net::ip::tcp::endpoint endpoint_, method_handlers& handlers_ )
   : bSsl( true ), ssl_name( nullptr )
-  , doc_root( doc_root_ ), endpoint( endpoint_ ) {}
+  , doc_root( doc_root_ ), endpoint( endpoint_ )
+  , handlers( handlers_ )
+  {}
 };
 
 // Return a response for the given request.
@@ -102,8 +104,8 @@ handle_request(
 {
 
   // Make sure we can handle the method
-  if( request.method() != http::verb::get &&
-      request.method() != http::verb::head
+  if( ( http::verb::get  != request.method() )  &&
+      ( http::verb::head != request.method() )
   ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
@@ -156,7 +158,7 @@ handle_request(
       // similar for ads.txt, sitemap.xml
       if ( 0 == request.target().compare( "/robots.txt" ) ) {
         static const std::string content( "User-agent: *\nAllow: /\n" );
-        http::response<http::string_body> response{
+        response_t response{
           std::piecewise_construct,
           std::make_tuple( content ),
           std::make_tuple( http::status::ok, request.version() )
@@ -180,8 +182,8 @@ handle_request(
   // Cache the size since we need it after the move
   auto const size = body.size();
 
-  // Respond to HEAD request
-  if ( request.method() == http::verb::head ) {
+  // Respond to HEAD request with empty body
+  if ( http::verb::head == request.method() ) {
     http::response<http::empty_body> response{ http::status::ok, request.version() };
     response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
     response.set( http::field::content_type, mime_type( path ) );
@@ -309,6 +311,7 @@ run_session(
         if ( beast::http::field::unknown == b->name() ) {
         BOOST_LOG_TRIVIAL(trace) << "fieldu: " << b->name_string() << '=' << b->value();
         // example:
+        // fieldu: Mcp-Protocol-Version=2025-03-26
         // fieldu: x-openai-host-hash=53160607
         // field: From=oai-searchbot(at)openai.com
         }
@@ -321,10 +324,6 @@ run_session(
       BOOST_LOG_TRIVIAL(trace)
         << "body: '" << request.body() << "'";
 
-      //if ( u ) { // try to determine unknown fields
-      //  BOOST_LOG_TRIVIAL(trace)
-      //    << "request: '" << request << "'";
-      //}
 
       auto response = handle_request( state, std::move( request ) );
 
@@ -342,6 +341,7 @@ net::awaitable<void, executor_type>
 detect_session(
   stream_type stream,
   ssl::context& ctx,
+  method_handlers& handlers,
   beast::string_view doc_root
 )
 {
@@ -362,7 +362,7 @@ detect_session(
 
   stream.expires_after(std::chrono::seconds(30));
 
-  state_t state( doc_root, stream.socket().remote_endpoint() );
+  state_t state( doc_root, stream.socket().remote_endpoint(), handlers );
 
   if( co_await beast::async_detect_ssl( stream, buffer ) ) {
 
@@ -410,6 +410,7 @@ listen(
   task_group& task_group,
   ssl::context& ctx,
   net::ip::tcp::endpoint endpoint,
+  method_handlers& handlers,
   beast::string_view doc_root
 )
 {
@@ -438,7 +439,7 @@ listen(
 
     net::co_spawn(
       std::move( socket_executor ),
-      detect_session( stream_type{ std::move( socket ) }, ctx, doc_root ),
+      detect_session( stream_type{ std::move( socket ) }, ctx, handlers, doc_root ),
       task_group.adapt(
         []( std::exception_ptr e ) {
           if ( e ) {
