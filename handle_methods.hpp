@@ -18,10 +18,12 @@ using fMethodHead_t = std::function<void()>;
 using fMethodGet_t = std::function<void()>;
 using fMethodPost_t = std::function<void()>;
 
-using fServerError_t = std::function<void(response_t&, const boost::beast::string_view )>;
-using fNotFound_t = std::function<void(response_t&, const boost::beast::string_view )>;
-using fBadRequest_t = std::function<void(response_t&, const boost::beast::string_view )>;
+using fResponse_t = std::function<void( response_t& )>;
 
-void bad_request( response_t& response, const boost::beast::string_view why );
-void not_found( response_t& response, const boost::beast::string_view target );
-void server_error( response_t& response, const boost::beast::string_view what );
+using fResponseSv_t = std::function<void( response_t&, const boost::beast::string_view )>;
+
+void bad_request(  response_t&, const boost::beast::string_view why );
+void not_found(    response_t&, const boost::beast::string_view target );
+void server_error( response_t&, const boost::beast::string_view what );
+
+void robots_txt( response_t& );

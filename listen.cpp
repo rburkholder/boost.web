@@ -18,9 +18,9 @@ path_cat(
   beast::string_view path
 )
 {
-  if(base.empty())
+  if( base.empty() )
     return std::string(path);
-  std::string result(base);
+  std::string result( base );
 
 #ifdef BOOST_MSVC
     char constexpr path_separator = '\\';
@@ -122,7 +122,7 @@ handle_request(
   }
 
   // ensure properly formed URL
-  boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
+  const boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
   if ( url.has_error() ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
@@ -131,11 +131,11 @@ handle_request(
   }
 
   // ensure properly formatted url path
-  const auto path_raw( url->path() );
+  const auto& path_raw( url->path() );
   // Request path must be absolute and not contain "..".
-  if( path_raw.empty() ||
-      path_raw[0] != '/' ||
-      path_raw.find("..") != beast::string_view::npos
+  if(        path_raw.empty() ||
+      '/' != path_raw[0] ||
+      beast::string_view::npos != path_raw.find("..")
   ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
@@ -145,9 +145,12 @@ handle_request(
   }
 
   // assign root of content directory, use index.html in each directory
-  std::string path = path_cat( state.doc_root, path_raw );
-  if ( '/' == path.back() ) {
-    path.append( "index.html" );
+  std::string path;
+  if ( '/' == path_raw.back() ) {
+    path = path_cat( state.doc_root, path_raw ) + "index.html";
+  }
+  else {
+    path = path_cat( state.doc_root, path_raw );
   }
 
   // log the action
@@ -165,18 +168,14 @@ handle_request(
   if( ec ) {
     // Handle the case where the file doesn't exist
     if( ec == beast::errc::no_such_file_or_directory ) {
-      // similar for ads.txt, sitemap.xml
+      // todo: similar for ads.txt, sitemap.xml
       if ( 0 == request.target().compare( "/robots.txt" ) ) {
-        static const std::string content( "User-agent: *\nAllow: /\n" );
-        response_t response{
-          std::piecewise_construct,
-          std::make_tuple( content ),
-          std::make_tuple( http::status::ok, request.version() )
-        };
-        response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+        response_t response{ http::status::ok, request.version() };
         response.set(http::field::content_type, mime_type( path ));
-        response.content_length( content.size() );
+        //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         response.keep_alive( request.keep_alive() );
+        state.handlers.fRobotsTxt( response );
+        //response.prepare_payload();
         return response;
       }
       else {
@@ -322,7 +321,7 @@ run_session(
     auto request( parser.release() );
 
     if ( http::verb::unknown == request.method() ) {
-      BOOST_LOG_TRIVIAL(trace) << "request: '" << request << "'";
+      //BOOST_LOG_TRIVIAL(trace) << "request: '" << request << "'"; // typically ' HTTP/1.1  \n'
       BOOST_LOG_TRIVIAL(info)
         << state.endpoint.address() << ':' << state.endpoint.port() << " unknown request"; // probably ssl session timeout
       co_return;

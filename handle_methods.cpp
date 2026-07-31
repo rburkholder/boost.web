@@ -20,11 +20,19 @@ void bad_request( response_t& response, const boost::beast::string_view why ) {
 void not_found( response_t& response, const boost::beast::string_view target ) {
   response.set( http::field::server, c_sVersion);
   response.set( http::field::content_type, "text/html");
-  response.body() = "The resource '" + std::string(target) + "' was not found.";
+  response.body() = "The resource '" + std::string( target ) + "' was not found.\n";
 }
 
 void server_error( response_t& response, const boost::beast::string_view what ) {
   response.set( http::field::server, c_sVersion);
   response.set( http::field::content_type, "text/html");
-  response.body() = "An error occurred: '" + std::string(what) + "'";
+  response.body() = "An error occurred: '" + std::string( what ) + "'\n";
+}
+
+void robots_txt( response_t& response ) {
+  static const std::string content( "User-agent: *\nAllow: /\n" );
+  response.set( http::field::server, c_sVersion);
+  //response.set( http::field::content_type, "text/html");
+  response.body() = content;
+  response.content_length( content.size() );
 }

@@ -107,6 +107,9 @@ main( int argc, char* argv[] )
   handlers.fServerError = []( response_t& response, const boost::beast::string_view what ){
     server_error( response, what );
   };
+  handlers.fRobotsTxt = []( response_t& response ){
+    robots_txt( response );
+  };
 
   // Create and launch a listening coroutine
   net::co_spawn(

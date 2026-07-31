@@ -18,9 +18,11 @@ using stream_type   = typename beast::tcp_stream::rebind_executor<executor_type>
 
 struct method_handlers {
 
-  fNotFound_t fNotFound;
-  fBadRequest_t fBadRequest;
-  fServerError_t fServerError;
+  fResponseSv_t fNotFound;
+  fResponseSv_t fBadRequest;
+  fResponseSv_t fServerError;
+
+  fResponse_t fRobotsTxt;
 
   fMethodHead_t fMethodHead;
   fMethodGet_t fMethodGet;
