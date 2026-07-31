@@ -222,7 +222,7 @@ handle_request(
       }
       break;
     default:
-      assert( false );  // should be unreachable
+      return server_error( request, "functionally unreachable", state );
       break;
   }
 }
