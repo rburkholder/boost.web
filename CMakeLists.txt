@@ -33,6 +33,7 @@ set(
     #Config.hpp
     #Server.hpp
     #root_certificates.hpp
+    handle_methods.hpp
     handle_signals.hpp
     listen.hpp
     mime_type.hpp
@@ -44,6 +45,7 @@ set(
   file_cpp
     #Config.cpp
     #Server.cpp
+    handle_methods.cpp
     handle_signals.cpp
     listen.cpp
     main.cpp
@@ -52,7 +54,7 @@ set(
 
 add_executable(
   ${PROJECT_NAME}
-    ${file_h}
+    ${file_hpp}
     ${file_cpp}
   )
 

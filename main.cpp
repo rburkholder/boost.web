@@ -38,11 +38,11 @@
 
 #include <boost/beast.hpp>
 
-#include "handle_signals.hpp"
 #include "listen.hpp"
-#include "server_certificate.hpp"
 #include "task_group.hpp"
-#include "handle_method.hpp"
+#include "handle_methods.hpp"
+#include "handle_signals.hpp"
+#include "server_certificate.hpp"
 
 namespace net       = boost::asio;
 namespace ssl       = boost::asio::ssl;
@@ -98,6 +98,15 @@ main( int argc, char* argv[] )
   task_group task_group{ ioc.get_executor() };
 
   method_handlers handlers;
+  handlers.fBadRequest = []( response_t& response, const boost::beast::string_view why ){
+    bad_request( response, why );
+  };
+  handlers.fNotFound = []( response_t& response, const boost::beast::string_view target ){
+    not_found( response, target );
+  };
+  handlers.fServerError = []( response_t& response, const boost::beast::string_view what ){
+    server_error( response, what );
+  };
 
   // Create and launch a listening coroutine
   net::co_spawn(

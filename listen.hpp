@@ -6,7 +6,7 @@
 #include <boost/beast.hpp>
 
 #include "task_group.hpp"
-#include "handle_method.hpp"
+#include "handle_methods.hpp"
 
 namespace beast     = boost::beast;
 namespace net       = boost::asio;
@@ -17,9 +17,10 @@ using acceptor_type = typename net::ip::tcp::acceptor::rebind_executor<executor_
 using stream_type   = typename beast::tcp_stream::rebind_executor<executor_type>::other;
 
 struct method_handlers {
-  fServerError_t fServerError;
+
   fNotFound_t fNotFound;
   fBadRequest_t fBadRequest;
+  fServerError_t fServerError;
 
   fMethodHead_t fMethodHead;
   fMethodGet_t fMethodGet;

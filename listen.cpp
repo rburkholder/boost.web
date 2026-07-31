@@ -41,42 +41,6 @@ path_cat(
 
 using response_t = http::response<http::string_body>;
 
-// Returns a bad request response
-template<class Body, class Allocator>
-response_t bad_request( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view why ) {
-  response_t response{ http::status::bad_request, request.version() };
-  response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-  response.set(http::field::content_type, "text/html");
-  response.keep_alive( request.keep_alive() );
-  response.body() = std::string(why);
-  response.prepare_payload();
-  return response;
-};
-
-// Returns a not found response
-template<class Body, class Allocator>
-response_t not_found( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view target ) {
-  response_t response{ http::status::not_found, request.version() };
-  response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-  response.set(http::field::content_type, "text/html");
-  response.keep_alive( request.keep_alive() );
-  response.body() = "The resource '" + std::string(target) + "' was not found.";
-  response.prepare_payload();
-  return response;
-};
-
-// Returns a server error response
-template<class Body, class Allocator>
-response_t server_error( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view what ) {
-  response_t response{ http::status::internal_server_error, request.version() };
-  response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-  response.set(http::field::content_type, "text/html");
-  response.keep_alive( request.keep_alive() );
-  response.body() = "An error occurred: '" + std::string(what) + "'";
-  response.prepare_payload();
-  return response;
-};
-
 struct state_t {
 
   bool bSsl;
@@ -90,6 +54,45 @@ struct state_t {
   , doc_root( doc_root_ ), endpoint( endpoint_ )
   , handlers( handlers_ )
   {}
+};
+
+// Returns a bad request response
+template<class Body, class Allocator>
+response_t bad_request( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view why, state_t& state ) {
+  response_t response{ http::status::bad_request, request.version() };
+  //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+  //response.set(http::field::content_type, "text/html");
+  response.keep_alive( request.keep_alive() );
+  //response.body() = std::string(why);
+  state.handlers.fBadRequest( response, why );
+  response.prepare_payload();
+  return response;
+};
+
+// Returns a not found response
+template<class Body, class Allocator>
+response_t not_found( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view target, state_t& state ) {
+  response_t response{ http::status::not_found, request.version() };
+  //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+  //response.set(http::field::content_type, "text/html");
+  response.keep_alive( request.keep_alive() );
+  //response.body() = "The resource '" + std::string(target) + "' was not found.";
+  state.handlers.fNotFound( response, target );
+  response.prepare_payload();
+  return response;
+};
+
+// Returns a server error response
+template<class Body, class Allocator>
+response_t server_error( http::request<Body, http::basic_fields<Allocator>>& request, beast::string_view what, state_t& state ) {
+  response_t response{ http::status::internal_server_error, request.version() };
+  //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+  //response.set(http::field::content_type, "text/html");
+  response.keep_alive( request.keep_alive() );
+  //response.body() = "An error occurred: '" + std::string(what) + "'";
+  state.handlers.fServerError( response, what );
+  response.prepare_payload();
+  return response;
 };
 
 // Return a response for the given request.
@@ -112,7 +115,7 @@ handle_request(
       << "unknown method: '"
       << request.method() << "'," << request.has_content_length()
       ;
-    return bad_request( request, "Unknown HTTP-method" );
+    return bad_request( request, "Unknown HTTP-method", state );
   }
 
   boost::system::result<boost::urls::url_view> url = boost::urls::parse_origin_form( request.target() );
@@ -120,7 +123,7 @@ handle_request(
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
       << "server error: " << request.target();
-    return server_error( request, request.target() );
+    return server_error( request, request.target(), state );
   }
 
   const auto path_raw( url->path() );
@@ -133,7 +136,7 @@ handle_request(
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
       << "illegal target: "
       << path_raw;
-    return bad_request( request, "Illegal request-target" );
+    return bad_request( request, "Illegal request-target", state );
   }
 
   std::string path = path_cat( state.doc_root, path_raw );
@@ -170,12 +173,12 @@ handle_request(
         return response;
       }
       else {
-        return not_found( request, request.target() );
+        return not_found( request, request.target(), state );
       }
     }
     else {
       // Handle an unknown error
-      return server_error( request, ec.message() );
+      return server_error( request, ec.message(), state );
     }
   }
 
@@ -323,7 +326,6 @@ run_session(
 
       BOOST_LOG_TRIVIAL(trace)
         << "body: '" << request.body() << "'";
-
 
       auto response = handle_request( state, std::move( request ) );
 
