@@ -5,6 +5,7 @@
 
 #include <boost/beast.hpp>
 
+#include "config.hpp"
 #include "task_group.hpp"
 
 namespace beast     = boost::beast;
@@ -17,8 +18,8 @@ using stream_type   = typename beast::tcp_stream::rebind_executor<executor_type>
 
 net::awaitable<void, executor_type>
 listen(
-  task_group& task_group,
-  ssl::context& ctx,
-  net::ip::tcp::endpoint endpoint,
-  beast::string_view doc_root
+  task_group&,
+  ssl::context&,
+  net::ip::tcp::endpoint,
+  const config::Values&
 );

@@ -5,6 +5,7 @@
 #include <boost/beast/ssl.hpp>
 
 #include "listen.hpp"
+#include "config.hpp"
 #include "mime_type.hpp"
 #include "handle_methods.hpp"
 
@@ -47,11 +48,11 @@ struct state_t {
   bool bSsl;
   const char* ssl_name;
   net::ip::tcp::endpoint endpoint;
-  beast::string_view doc_root;
+  const config::Values& choices;
 
-  state_t( boost::string_view doc_root_, net::ip::tcp::endpoint endpoint_ )
+  state_t( const config::Values& choices_, net::ip::tcp::endpoint endpoint_ )
   : bSsl( true ), ssl_name( nullptr )
-  , doc_root( doc_root_ ), endpoint( endpoint_ )
+  , choices( choices_ ), endpoint( endpoint_ )
   {}
 };
 
@@ -146,10 +147,10 @@ handle_request(
   // assign root of content directory, use index.html in each directory
   std::string path;
   if ( '/' == path_raw.back() ) {
-    path = path_cat( state.doc_root, path_raw ) + "index.html";
+    path = path_cat( state.choices.sContentDirectory, path_raw ) + "index.html";
   }
   else {
-    path = path_cat( state.doc_root, path_raw );
+    path = path_cat( state.choices.sContentDirectory, path_raw );
   }
 
   // log the action
@@ -362,7 +363,7 @@ net::awaitable<void, executor_type>
 detect_session(
   stream_type stream,
   ssl::context& ctx,
-  beast::string_view doc_root
+  const config::Values& choices
 )
 {
 
@@ -382,7 +383,7 @@ detect_session(
 
   stream.expires_after(std::chrono::seconds(30));
 
-  state_t state( doc_root, stream.socket().remote_endpoint() );
+  state_t state( choices, stream.socket().remote_endpoint() );
 
   if( co_await beast::async_detect_ssl( stream, buffer ) ) {
 
@@ -430,7 +431,7 @@ listen(
   task_group& task_group,
   ssl::context& ctx,
   net::ip::tcp::endpoint endpoint,
-  beast::string_view doc_root
+  const config::Values& choices
 )
 {
   // BOOST_LOG_TRIVIAL(info) << "starting listen" << std::endl; // only a 1 count
@@ -458,7 +459,7 @@ listen(
 
     net::co_spawn(
       std::move( socket_executor ),
-      detect_session( stream_type{ std::move( socket ) }, ctx, doc_root ),
+      detect_session( stream_type{ std::move( socket ) }, ctx, choices ),
       task_group.adapt(
         []( std::exception_ptr e ) {
           if ( e ) {

@@ -88,7 +88,7 @@ int main( int argc, char* argv[] ) {
     // Create and launch a listening coroutine
   net::co_spawn(
     net::make_strand(ioc),
-    listen( task_group, ctx, endpoint, choices.sContentDirectory ),
+    listen( task_group, ctx, endpoint, choices ),
     task_group.adapt(
       []( std::exception_ptr e ) {
         if( e ) {
