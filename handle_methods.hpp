@@ -14,16 +14,15 @@ namespace http = boost::beast::http;
 
 using response_t = http::response<http::string_body>;
 
-using fMethodHead_t = std::function<void()>;
-using fMethodGet_t = std::function<void()>;
-using fMethodPost_t = std::function<void()>;
-
 using fResponse_t = std::function<void( response_t& )>;
-
 using fResponseSv_t = std::function<void( response_t&, const boost::beast::string_view )>;
 
-void bad_request(  response_t&, const boost::beast::string_view why );
-void not_found(    response_t&, const boost::beast::string_view target );
-void server_error( response_t&, const boost::beast::string_view what );
+void response_bad_request(  response_t&, const boost::beast::string_view why );
+void response_not_found(    response_t&, const boost::beast::string_view target );
+void response_server_error( response_t&, const boost::beast::string_view what );
 
-void robots_txt( response_t& );
+void resource_robots_txt( response_t& );
+
+void method_head( response_t & );
+void method_get(  response_t& );
+void method_post( response_t& );

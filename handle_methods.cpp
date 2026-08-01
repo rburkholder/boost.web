@@ -11,28 +11,37 @@ namespace {
   static const std::string c_sVersion( "ounl web server with lua v1.0");
 }
 
-void bad_request( response_t& response, const boost::beast::string_view why ) {
+void response_bad_request( response_t& response, const boost::beast::string_view why ) {
   response.set( http::field::server, c_sVersion);
   response.set( http::field::content_type, "text/html");
   response.body() = std::string( why );
 }
 
-void not_found( response_t& response, const boost::beast::string_view target ) {
+void response_not_found( response_t& response, const boost::beast::string_view target ) {
   response.set( http::field::server, c_sVersion);
   response.set( http::field::content_type, "text/html");
   response.body() = "The resource '" + std::string( target ) + "' was not found.\n";
 }
 
-void server_error( response_t& response, const boost::beast::string_view what ) {
+void response_server_error( response_t& response, const boost::beast::string_view what ) {
   response.set( http::field::server, c_sVersion);
   response.set( http::field::content_type, "text/html");
   response.body() = "An error occurred: '" + std::string( what ) + "'\n";
 }
 
-void robots_txt( response_t& response ) {
+void resource_robots_txt( response_t& response ) {
   static const std::string content( "User-agent: *\nAllow: /\n" );
   response.set( http::field::server, c_sVersion);
   //response.set( http::field::content_type, "text/html");
   response.body() = content;
   response.content_length( content.size() );
+}
+
+void method_get( response_t& response ) {
+}
+
+void method_post( response_t& response ) {
+}
+
+void method_head( response_t & response ) {
 }

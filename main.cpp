@@ -97,24 +97,10 @@ main( int argc, char* argv[] )
   // Track coroutines
   task_group task_group{ ioc.get_executor() };
 
-  method_handlers handlers;
-  handlers.fBadRequest = []( response_t& response, const boost::beast::string_view why ){
-    bad_request( response, why );
-  };
-  handlers.fNotFound = []( response_t& response, const boost::beast::string_view target ){
-    not_found( response, target );
-  };
-  handlers.fServerError = []( response_t& response, const boost::beast::string_view what ){
-    server_error( response, what );
-  };
-  handlers.fRobotsTxt = []( response_t& response ){
-    robots_txt( response );
-  };
-
-  // Create and launch a listening coroutine
+    // Create and launch a listening coroutine
   net::co_spawn(
     net::make_strand(ioc),
-    listen( task_group, ctx, endpoint, handlers, doc_root ),
+    listen( task_group, ctx, endpoint, doc_root ),
     task_group.adapt(
       []( std::exception_ptr e ) {
         if( e ) {

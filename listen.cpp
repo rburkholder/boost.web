@@ -6,6 +6,7 @@
 
 #include "listen.hpp"
 #include "mime_type.hpp"
+#include "handle_methods.hpp"
 
 namespace http      = beast::http;
 namespace websocket = beast::websocket;
@@ -46,13 +47,11 @@ struct state_t {
   bool bSsl;
   const char* ssl_name;
   net::ip::tcp::endpoint endpoint;
-  method_handlers& handlers;
   beast::string_view doc_root;
 
-  state_t( boost::string_view doc_root_, net::ip::tcp::endpoint endpoint_, method_handlers& handlers_ )
+  state_t( boost::string_view doc_root_, net::ip::tcp::endpoint endpoint_ )
   : bSsl( true ), ssl_name( nullptr )
   , doc_root( doc_root_ ), endpoint( endpoint_ )
-  , handlers( handlers_ )
   {}
 };
 
@@ -64,7 +63,7 @@ response_t bad_request( http::request<Body, http::basic_fields<Allocator>>& requ
   //response.set(http::field::content_type, "text/html");
   response.keep_alive( request.keep_alive() );
   //response.body() = std::string(why);
-  state.handlers.fBadRequest( response, why );
+  response_bad_request( response, why );
   response.prepare_payload();
   return response;
 };
@@ -77,7 +76,7 @@ response_t not_found( http::request<Body, http::basic_fields<Allocator>>& reques
   //response.set(http::field::content_type, "text/html");
   response.keep_alive( request.keep_alive() );
   //response.body() = "The resource '" + std::string(target) + "' was not found.";
-  state.handlers.fNotFound( response, target );
+  response_not_found( response, target );
   response.prepare_payload();
   return response;
 };
@@ -90,7 +89,7 @@ response_t server_error( http::request<Body, http::basic_fields<Allocator>>& req
   //response.set(http::field::content_type, "text/html");
   response.keep_alive( request.keep_alive() );
   //response.body() = "An error occurred: '" + std::string(what) + "'";
-  state.handlers.fServerError( response, what );
+  response_server_error( response, what );
   response.prepare_payload();
   return response;
 };
@@ -174,7 +173,7 @@ handle_request(
         response.set(http::field::content_type, mime_type( path ));
         //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         response.keep_alive( request.keep_alive() );
-        state.handlers.fRobotsTxt( response );
+        resource_robots_txt( response );
         //response.prepare_payload();
         return response;
       }
@@ -342,8 +341,10 @@ run_session(
         // NOTE: will need to find the enum / name lookup table
       }
 
-      BOOST_LOG_TRIVIAL(trace)
-        << "body: '" << request.body() << "'";
+      if ( 0 < request.body().length() ) {
+        BOOST_LOG_TRIVIAL(trace)
+          << "body: '" << request.body() << "'";
+      }
 
       auto response = handle_request( state, std::move( request ) );
 
@@ -361,7 +362,6 @@ net::awaitable<void, executor_type>
 detect_session(
   stream_type stream,
   ssl::context& ctx,
-  method_handlers& handlers,
   beast::string_view doc_root
 )
 {
@@ -382,7 +382,7 @@ detect_session(
 
   stream.expires_after(std::chrono::seconds(30));
 
-  state_t state( doc_root, stream.socket().remote_endpoint(), handlers );
+  state_t state( doc_root, stream.socket().remote_endpoint() );
 
   if( co_await beast::async_detect_ssl( stream, buffer ) ) {
 
@@ -430,7 +430,6 @@ listen(
   task_group& task_group,
   ssl::context& ctx,
   net::ip::tcp::endpoint endpoint,
-  method_handlers& handlers,
   beast::string_view doc_root
 )
 {
@@ -459,7 +458,7 @@ listen(
 
     net::co_spawn(
       std::move( socket_executor ),
-      detect_session( stream_type{ std::move( socket ) }, ctx, handlers, doc_root ),
+      detect_session( stream_type{ std::move( socket ) }, ctx, doc_root ),
       task_group.adapt(
         []( std::exception_ptr e ) {
           if ( e ) {
