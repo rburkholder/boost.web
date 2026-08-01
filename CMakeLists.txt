@@ -26,11 +26,11 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 #find_package(Boost 1.81.0 REQUIRED COMPONENTS program_options thread filesystem log)
 #find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup json REQUIRED )
-find_package(Boost REQUIRED COMPONENTS log url)
+find_package(Boost REQUIRED COMPONENTS log url program_options)
 
 set(
   file_hpp
-    #Config.hpp
+    config.hpp
     #Server.hpp
     #root_certificates.hpp
     handle_methods.hpp
@@ -43,7 +43,7 @@ set(
 
 set(
   file_cpp
-    #Config.cpp
+    config.cpp
     #Server.cpp
     handle_methods.cpp
     handle_signals.cpp

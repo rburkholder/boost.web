@@ -63,7 +63,11 @@ static long ssl_cb_tlsext_servername( SSL* ssl, int* ad, void* arg ) {
 }
 
 void
-load_server_certificate( boost::asio::ssl::context& ctx ) {
+load_server_certificate(
+  boost::asio::ssl::context& ctx
+, const std::string& sPathFullChain
+, const std::string& sPathPrivKey
+) {
 
   ctx.set_password_callback(
     [](std::size_t,
@@ -83,11 +87,11 @@ load_server_certificate( boost::asio::ssl::context& ctx ) {
     boost::asio::ssl::context::single_dh_use);
 
   ctx.use_certificate_chain_file (
-    "certs/fullchain.pem"
+    sPathFullChain
   );
 
   ctx.use_private_key_file(
-    "certs/privkey.pem",
+    sPathPrivKey,
     boost::asio::ssl::context::file_format::pem
   );
 

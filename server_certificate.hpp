@@ -17,6 +17,10 @@
 */
 
 void
-load_server_certificate( boost::asio::ssl::context& ctx );
+load_server_certificate(
+  boost::asio::ssl::context& ctx
+, const std::string& sPathFullChain
+, const std::string& sPathPrivKey
+);
 
 #endif

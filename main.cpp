@@ -19,10 +19,6 @@
  * Created: July 20, 2026 18:36
  */
 
-//#include <iostream>
-
-//#include "Server.hpp"
-
 //------------------------------------------------------------------------------
 //
 // Example: Advanced server, flex (plain + SSL)
@@ -38,9 +34,9 @@
 
 #include <boost/beast.hpp>
 
+#include "config.hpp"
 #include "listen.hpp"
 #include "task_group.hpp"
-#include "handle_methods.hpp"
 #include "handle_signals.hpp"
 #include "server_certificate.hpp"
 
@@ -49,21 +45,23 @@ namespace ssl       = boost::asio::ssl;
 
 using executor_type = net::strand<net::io_context::executor_type>;
 
-int
-main( int argc, char* argv[] )
-{
+int main( int argc, char* argv[] ) {
 
-  static const std::string c_sConfigFilename( "web.boost.cfg" );
+  std::string sConfigFilename( "web.boost.cfg" );
 
   std::cout << "(c)2026 One Unified Net Limited" << std::endl;
 
-  //config::Values choices;
+  // Check command line arguments.
+  if( 1 == argc ) {
+    sConfigFilename = argv[ 1 ];
+  }
 
-  //if ( Load( c_sConfigFilename, choices ) ) {
-  //}
-  //else {
-  //  return EXIT_FAILURE;
-  //}
+  config::Values choices;
+
+  if ( Load( sConfigFilename, choices ) ) {}
+  else {
+    return EXIT_FAILURE;
+  }
 
   //try {
   //  Server server;
@@ -72,27 +70,17 @@ main( int argc, char* argv[] )
   //  return EXIT_FAILURE;
   //}
 
-  // Check command line arguments.
-  if(argc != 5) {
-    std::cerr << "Usage: boost.web <address> <port> <doc_root> <threads>\n"
-              << "Example:\n"
-              << "    boost.web 0.0.0.0 8080 . 1\n";
-    return EXIT_FAILURE;
-  }
-  auto const address  = net::ip::make_address( argv[ 1 ] );
-  auto const port     = static_cast<unsigned short>( std::atoi(argv[2]) );
-  auto const endpoint = net::ip::tcp::endpoint{ address, port };
-  auto const doc_root = beast::string_view{ argv[3] };
-  auto const threads  = std::max<int>( 1, std::atoi( argv[4] ) );
+  auto const address  = net::ip::make_address( choices.sListenAddress );
+  auto const endpoint = net::ip::tcp::endpoint{ address, choices.nPortHttps };
 
   // The io_context is required for all I/O
-  net::io_context ioc{ threads };
+  net::io_context ioc{ choices.nThreads };
 
   // The SSL context is required, and holds certificates
   ssl::context ctx{ ssl::context::tlsv12 };
 
   // This holds the self-signed certificate used by the server
-  load_server_certificate( ctx );
+  load_server_certificate( ctx, choices.sCertificatePathFullChain, choices.sCertfificatePathPrivKey );
 
   // Track coroutines
   task_group task_group{ ioc.get_executor() };
@@ -100,7 +88,7 @@ main( int argc, char* argv[] )
     // Create and launch a listening coroutine
   net::co_spawn(
     net::make_strand(ioc),
-    listen( task_group, ctx, endpoint, doc_root ),
+    listen( task_group, ctx, endpoint, choices.sContentDirectory ),
     task_group.adapt(
       []( std::exception_ptr e ) {
         if( e ) {
@@ -122,8 +110,8 @@ main( int argc, char* argv[] )
 
   // Run the I/O service on the requested number of threads
   std::vector<std::thread> vThread;
-  vThread.reserve( threads - 1 );
-  for( auto i = threads - 1; i > 0; --i ) {
+  vThread.reserve( choices.nThreads - 1 );
+  for( auto i = choices.nThreads - 1; i > 0; --i ) {
     vThread.emplace_back( [&ioc] { ioc.run(); } );
   }
 
