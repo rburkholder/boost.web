@@ -35,6 +35,7 @@ set(
     #root_certificates.hpp
     handle_methods.hpp
     handle_signals.hpp
+    KeyWordMatch.hpp
     listen.hpp
     mime_type.hpp
     server_certificate.hpp
@@ -49,6 +50,7 @@ set(
     handle_signals.cpp
     listen.cpp
     main.cpp
+    mime_type.cpp
     server_certificate.cpp
   )
 

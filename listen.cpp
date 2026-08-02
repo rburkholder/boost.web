@@ -106,6 +106,8 @@ handle_request(
 )
 {
 
+  static const mime_type mt;
+
   switch ( request.method() ) {
     case http::verb::get:
     case http::verb::head:
@@ -171,7 +173,7 @@ handle_request(
       // todo: similar for ads.txt, sitemap.xml
       if ( 0 == request.target().compare( "/robots.txt" ) ) {
         response_t response{ http::status::ok, request.version() };
-        response.set(http::field::content_type, mime_type( path ));
+        response.set(http::field::content_type, mt.lu( path ));
         //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         response.keep_alive( request.keep_alive() );
         resource_robots_txt( response );
@@ -204,7 +206,7 @@ handle_request(
         };
 
         response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mime_type( path ) );
+        response.set( http::field::content_type, mt.lu( path ) );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );
         return response;
@@ -215,7 +217,7 @@ handle_request(
       {
         http::response<http::empty_body> response{ http::status::ok, request.version() };
         response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mime_type( path ) );
+        response.set( http::field::content_type, mt.lu( path ) );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );
         return response;
