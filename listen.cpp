@@ -195,17 +195,26 @@ handle_request(
 
   switch ( request.method() ) {
     case http::verb::post:
-      //break;  // use get for now
+      {
+        response_t response{ http::status::ok, request.version() };
+        method_post( response );
+        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+        response.set( http::field::content_type, mt.lu( path ) );
+        //response.content_length( size );
+        response.keep_alive( request.keep_alive() );
+        response.prepare_payload();
+        return response;
+      }
+      break;
     case http::verb::get:
       {
-        // Respond to GET/POST request
         http::response<http::file_body> response{
           std::piecewise_construct,
           std::make_tuple( std::move( body ) ),
           std::make_tuple( http::status::ok, request.version() )
         };
-
-        response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+        method_get( response );
+        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
         response.set( http::field::content_type, mt.lu( path ) );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );
@@ -213,10 +222,11 @@ handle_request(
       }
       break;
     case http::verb::head:
-      // Respond to HEAD request with empty body
       {
+        // Respond to HEAD request with empty body
         http::response<http::empty_body> response{ http::status::ok, request.version() };
-        response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+        method_head( response );
+        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
         response.set( http::field::content_type, mt.lu( path ) );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );

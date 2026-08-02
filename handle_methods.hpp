@@ -23,6 +23,6 @@ void response_server_error( response_t&, const boost::beast::string_view what );
 
 void resource_robots_txt( response_t& );
 
-void method_head( response_t & );
-void method_get(  response_t& );
+void method_head( http::response<http::empty_body>& );
+void method_get( http::response<http::file_body>& );
 void method_post( response_t& );
