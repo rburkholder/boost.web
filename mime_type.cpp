@@ -32,8 +32,6 @@ mime_type::~mime_type() {
 
 const beast::string_view mime_type::lu( const beast::string_view path ) const {
 
-  using beast::iequals;
-
   auto const ext = [&path] {
     auto const pos = path.rfind(".");
     if( pos == beast::string_view::npos )
