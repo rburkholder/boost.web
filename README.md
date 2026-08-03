@@ -7,9 +7,13 @@ Sample Cnfiguration File (web.boost.cfg)
 thread_count = 2
 static_host = static.example.com
 static_directory = web/static
-static_extension = .jpg
-static_extension = .jpeg
-static_extension = .png
+static_extension = jpg
+static_extension = jpeg
+static_extension = png
+static_extension = css
+static_extension = txt
+static_extension = ico
+static_extension = gif
 content_directory = web/content
 port_http = 80
 port_https = 443
