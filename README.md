@@ -1,8 +1,11 @@
 # web.boost
 
-Use Boost Beast Advanced server, flex (plain + SSL) as template for handling web operations.
+## inttroduction
 
-Sample Cnfiguration File (web.boost.cfg)
+* Use Boost Beast Advanced server, flex (plain + SSL) as template for handling web operations.
+* Currently developed on Debian Linux platform
+
+## sample configuration file (web.boost.cfg)
 ```
 thread_count = 2
 static_host = static.example.com
@@ -21,11 +24,22 @@ listen_address = 0.0.0.0
 certificate_path_fullchain = certs/fullchain.pem
 certificate_path_privkey = certs/privkey.pem
 ```
-
+## build outline
 * compile environment: C++20
 * requires libssl-dev, libboost-dev (json, log, program_options, serialization, url)
 
+## security
 To run on a port under 1024, requires something like:
 ```
 sudo setcap CAP_NET_BIND_SERVICE=+eip ~/projects/web.boost/build/boost.web
 ```
+
+## current features
+
+* 2026/08/02
+  * GET static html and support files from a directory
+  * supports HTTP and HTTPS
+
+## alternatives
+* [wt web toolkit](https://www.webtoolkit.eu/wt/) - designed for single page applications with total control over page generation
+* [drogon web framework](https://drogon.org/) - excellent functionality but comes up short on SSL capability and reliability
