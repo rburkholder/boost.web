@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       //"program": "/usr/bin/authbind ${workspaceFolder}/build/web.ounl",
-      "program": "${workspaceFolder}/build/boost.web",
+      "program": "${workspaceFolder}/build/src/boost.web",
       "args": [
         "0.0.0.0", 443, "site.ounl", 2
       ],

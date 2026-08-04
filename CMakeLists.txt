@@ -1,7 +1,11 @@
 # mqtt2telegram
 cmake_minimum_required (VERSION 3.14)
 
-PROJECT(boost.web)
+PROJECT(boost.web.root)
+
+# see https://blog.raymond.burkholder.net/index.php?/archives/1183-GCC-Optimization-for-Native-Architecture.html
+add_definitions(-march=native)
+add_definitions(-pthread)
 
 if (POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
@@ -12,67 +16,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_COMPILER_ARCHITECTURE_ID "x64")
 
-# https://cmake.org/cmake/help/v3.6/module/FindBoost.html
-#set(Boost_ARCHITECTURE "-x64")
-#set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
-#set(Boost_DEBUG 1)
-#set(Boost_REALPATH ON)
-#set(BOOST_ROOT "/usr/local")
-#set(Boost_DETAILED_FAILURE_MSG ON)
-#set(BOOST_INCLUDEDIR "/usr/local/include/boost")
-#set(BOOST_LIBRARYDIR "/usr/local/lib")
-
-#find_package(Boost 1.81.0 REQUIRED COMPONENTS program_options thread filesystem log)
-#find_package(Boost 1.81.0 COMPONENTS program_options regex thread filesystem log log_setup json REQUIRED )
-find_package(Boost REQUIRED COMPONENTS log url program_options)
-
-set(
-  file_hpp
-    config.hpp
-    #Server.hpp
-    #root_certificates.hpp
-    handle_methods.hpp
-    handle_signals.hpp
-    KeyWordMatch.hpp
-    listen.hpp
-    mime_type.hpp
-    server_certificate.hpp
-    task_group.hpp
-  )
-
-set(
-  file_cpp
-    config.cpp
-    #Server.cpp
-    handle_methods.cpp
-    handle_signals.cpp
-    listen.cpp
-    main.cpp
-    mime_type.cpp
-    server_certificate.cpp
-  )
-
-add_executable(
-  ${PROJECT_NAME}
-    ${file_hpp}
-    ${file_cpp}
-  )
-
-target_compile_definitions(${PROJECT_NAME} PUBLIC BOOST_LOG_DYN_LINK )
-#target_compile_definitions(${PROJECT_NAME} PUBLIC pthread )
-#add_definitions(-pthread)
-
-target_link_directories(
-  ${PROJECT_NAME} PUBLIC
-    /usr/local/lib
-  )
-
-target_link_libraries(
-  ${PROJECT_NAME}
-    pthread
-    ${Boost_LIBRARIES}
-    crypto
-    ssl
-  )
+add_subdirectory(src)
