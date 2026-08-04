@@ -134,10 +134,12 @@ handle_request(
 
   // ensure properly formatted url path
   const auto& path_raw( url->path() );
-  // Request path must be absolute and not contain "..".
-  if(        path_raw.empty() ||
-      '/' != path_raw[0] ||
-      beast::string_view::npos != path_raw.find("..")
+  // Request path must be absolute and not contain ".." or "/."
+  // todo: run parser on this
+  if (    path_raw.empty()
+       || '/' != path_raw[0]
+       || beast::string_view::npos != path_raw.find( ".." ) // path backtrack
+       || beast::string_view::npos != path_raw.find( "/." ) // hidden file/folder
   ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
