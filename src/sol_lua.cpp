@@ -23,15 +23,39 @@
 
 #include "sol_lua.hpp"
 
-sol_lua_t::sol_lua_t() {
+namespace {
+  const auto& instance_identify = R"(
+local instance, name = ...
+print( 'lua session ' .. instance .. ' ' .. name )
+  )";
+}
+
+std::atomic_uint64_t sol_lua_t::m_nInstanceCounter( 1 );
+
+sol_lua_t::sol_lua_t()
+: m_nInstance( m_nInstanceCounter.fetch_add( 1, std::memory_order_relaxed ) )
+{
   // maybe only open libraries when required?
-  sol_lua.open_libraries( sol::lib::base );
-  sol_lua.set_function( "print", &sol_lua_t::print );
-  sol_lua.script( "print( 'lua session - begin' )" );
+  m_sol.open_libraries( sol::lib::base );
+  m_sol.set_function( "print", &sol_lua_t::print );
+  f_instance_identify = m_sol.load( instance_identify );
+  if ( f_instance_identify.valid() ) {
+    f_instance_identify( m_nInstance, "begin" );
+  }
+  else {
+
+  }
+
 }
 
 sol_lua_t::~sol_lua_t() {
-  sol_lua.script( "print( 'lua session - end' )" );
+  if ( f_instance_identify.valid() ) {
+    f_instance_identify( m_nInstance, "end" );
+  }
+  else {
+
+  }
+
 }
 
 void sol_lua_t::print( const std::string_view message ) {

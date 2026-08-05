@@ -21,7 +21,10 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <string_view>
+//#include <sol/load_result.hpp>
 
 #include <sol/sol.hpp>
 
@@ -31,7 +34,13 @@ public:
   ~sol_lua_t();
 protected:
 private:
-  sol::state sol_lua;
+
+  static std::atomic_uint64_t m_nInstanceCounter;
+  const uint64_t m_nInstance;
+
+  sol::state m_sol;
+
+  sol::load_result f_instance_identify;
 
   static void print( const std::string_view );
 };
