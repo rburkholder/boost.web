@@ -4,10 +4,9 @@
 
 #include <boost/beast/ssl.hpp>
 
-#include <sol/sol.hpp>
-
 #include "listen.hpp"
 #include "config.hpp"
+#include "sol_lua.hpp"
 #include "mime_type.hpp"
 #include "handle_methods.hpp"
 
@@ -308,13 +307,11 @@ run_session(
   state_t state
 )
 {
-  auto cs = co_await net::this_coro::cancellation_state;
 
   // use same sol/lua state for sessions with keepalive
-  // maybe create state here, but only open libraries when required?
-  sol::state sol;
-  sol.open_libraries( sol::lib::base, sol::lib::package );
-  sol.script( "print( 'new lua session' )" );
+  sol_lua_t sol_lua;
+
+  auto cs = co_await net::this_coro::cancellation_state;
 
   while ( !cs.cancelled() ) {
 
@@ -338,7 +335,7 @@ run_session(
       co_return;
     }
 
-    BOOST_LOG_TRIVIAL(trace) << "----------";
+    //BOOST_LOG_TRIVIAL(trace) << "----------";
 
     auto request( parser.release() );
 

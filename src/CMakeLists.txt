@@ -27,6 +27,7 @@ set(
     listen.hpp
     mime_type.hpp
     server_certificate.hpp
+    sol_lua.hpp
     task_group.hpp
   )
 
@@ -39,6 +40,7 @@ set(
     main.cpp
     mime_type.cpp
     server_certificate.cpp
+    sol_lua.cpp
   )
 
 add_executable(
