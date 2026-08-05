@@ -54,7 +54,7 @@ int main( int argc, char* argv[] ) {
   std::cout << "(c)2026 One Unified Net Limited" << std::endl;
 
   // Check command line arguments.
-  if( 1 == argc ) {
+  if( 2 == argc ) {
     sConfigFilename = argv[ 1 ];
   }
 
