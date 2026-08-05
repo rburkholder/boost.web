@@ -19,14 +19,21 @@
  * Created: August 5, 2026 15:47:57
  */
 
+#include <boost/log/trivial.hpp>
+
 #include "sol_lua.hpp"
 
 sol_lua_t::sol_lua_t() {
-  sol_lua.open_libraries( sol::lib::base, sol::lib::package );
-  // maybe create state here, but only open libraries when required?
+  // maybe only open libraries when required?
+  sol_lua.open_libraries( sol::lib::base );
+  sol_lua.set_function( "print", &sol_lua_t::print );
   sol_lua.script( "print( 'lua session - begin' )" );
 }
 
 sol_lua_t::~sol_lua_t() {
   sol_lua.script( "print( 'lua session - end' )" );
+}
+
+void sol_lua_t::print( const std::string_view message ) {
+  BOOST_LOG_TRIVIAL(info) << message;
 }

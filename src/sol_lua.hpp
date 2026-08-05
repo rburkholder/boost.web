@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <string_view>
+
 #include <sol/sol.hpp>
 
 class sol_lua_t {
@@ -30,4 +32,6 @@ public:
 protected:
 private:
   sol::state sol_lua;
+
+  static void print( const std::string_view );
 };
