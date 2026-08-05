@@ -4,6 +4,8 @@
 
 #include <boost/beast/ssl.hpp>
 
+#include <sol/sol.hpp>
+
 #include "listen.hpp"
 #include "config.hpp"
 #include "mime_type.hpp"
@@ -308,6 +310,12 @@ run_session(
 {
   auto cs = co_await net::this_coro::cancellation_state;
 
+  // use same sol/lua state for sessions with keepalive
+  // maybe create state here, but only open libraries when required?
+  sol::state sol;
+  sol.open_libraries( sol::lib::base, sol::lib::package );
+  sol.script( "print( 'new lua session' )" );
+
   while ( !cs.cancelled() ) {
 
     http::request_parser<http::string_body> parser;
@@ -344,11 +352,11 @@ run_session(
       //bool u( false );
       for ( auto b = request.begin(); b != request.end(); b++ ) {
         if ( beast::http::field::unknown == b->name() ) {
-        BOOST_LOG_TRIVIAL(trace) << "fieldu: " << b->name_string() << '=' << b->value();
-        // example:
-        // fieldu: Mcp-Protocol-Version=2025-03-26
-        // fieldu: x-openai-host-hash=53160607
-        // field: From=oai-searchbot(at)openai.com
+          BOOST_LOG_TRIVIAL(trace) << "fieldu: " << b->name_string() << '=' << b->value();
+          // example:
+          // fieldu: Mcp-Protocol-Version=2025-03-26
+          // fieldu: x-openai-host-hash=53160607
+          // field: From=oai-searchbot(at)openai.com
         }
         else {
           BOOST_LOG_TRIVIAL(trace) << "field: " << b->name() << '=' << b->value();

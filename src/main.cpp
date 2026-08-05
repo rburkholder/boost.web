@@ -34,8 +34,6 @@
 
 #include <boost/beast.hpp>
 
-#include <sol/sol.hpp>
-
 #include "config.hpp"
 #include "listen.hpp"
 #include "task_group.hpp"
@@ -80,7 +78,7 @@ int main( int argc, char* argv[] ) {
   // Track coroutines
   task_group task_group{ ioc.get_executor() };
 
-    // Create and launch a listening coroutine
+  // Create and launch a listening coroutine
   net::co_spawn(
     net::make_strand(ioc),
     listen( task_group, ctx, endpoint, choices ),
@@ -102,10 +100,6 @@ int main( int argc, char* argv[] ) {
     net::make_strand( ioc ),
     handle_signals(task_group), net::detached
   );
-
-  sol::state lua;
-  lua.open_libraries( sol::lib::base );
-  lua.script( "print( 'lua here' )" );
 
   // Run the I/O service on the requested number of threads
   std::vector<std::thread> vThread;
