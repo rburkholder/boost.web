@@ -44,10 +44,19 @@ git clone --depth=1 https://github.com/ThePhD/sol2.git
 sudo mv -n sol2/include/sol /usr/local/include/
 ```
 
-## security
+### build project
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+## security, run
 To run on a port under 1024, requires something like:
 ```
-sudo setcap CAP_NET_BIND_SERVICE=+eip ~/projects/web.boost/build/boost.web
+sudo setcap CAP_NET_BIND_SERVICE=+eip ~/projects/web.boost/build/src/boost.web
+~/projects/web.boost/build/src/boost.web
 ```
 
 ## current features

@@ -34,6 +34,8 @@
 
 #include <boost/beast.hpp>
 
+#include <sol/sol.hpp>
+
 #include "config.hpp"
 #include "listen.hpp"
 #include "task_group.hpp"
@@ -62,13 +64,6 @@ int main( int argc, char* argv[] ) {
   else {
     return EXIT_FAILURE;
   }
-
-  //try {
-  //  Server server;
-  //}
-  //catch(...) {
-  //  return EXIT_FAILURE;
-  //}
 
   auto const address  = net::ip::make_address( choices.sListenAddress );
   auto const endpoint = net::ip::tcp::endpoint{ address, choices.nPortHttps };
@@ -107,6 +102,10 @@ int main( int argc, char* argv[] ) {
     net::make_strand( ioc ),
     handle_signals(task_group), net::detached
   );
+
+  sol::state lua;
+  lua.open_libraries( sol::lib::base );
+  lua.script( "print( 'lua here' )" );
 
   // Run the I/O service on the requested number of threads
   std::vector<std::thread> vThread;
