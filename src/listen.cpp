@@ -196,18 +196,6 @@ handle_request(
   auto const size = body.size();
 
   switch ( request.method() ) {
-    case http::verb::post:
-      {
-        response_t response{ http::status::ok, request.version() };
-        method_post( response );
-        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt.lu( path ) );
-        //response.content_length( size );
-        response.keep_alive( request.keep_alive() );
-        response.prepare_payload();
-        return response;
-      }
-      break;
     case http::verb::get:
       {
         http::response<http::file_body> response{
@@ -220,6 +208,18 @@ handle_request(
         response.set( http::field::content_type, mt.lu( path ) );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );
+        return response;
+      }
+      break;
+    case http::verb::post:
+      {
+        response_t response{ http::status::ok, request.version() };
+        method_post( response );
+        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+        response.set( http::field::content_type, mt.lu( path ) );
+        //response.content_length( size );
+        response.keep_alive( request.keep_alive() );
+        response.prepare_payload();
         return response;
       }
       break;
@@ -311,7 +311,7 @@ run_session(
   while ( !cs.cancelled() ) {
 
     http::request_parser<http::string_body> parser;
-    parser.body_limit(10000);
+    parser.body_limit( 10000 );
 
     auto [ec, _] =
       co_await http::async_read( stream, buffer, parser, net::as_tuple );
@@ -395,11 +395,11 @@ detect_session(
   // inherited by all child coroutines.
   co_await net::this_coro::throw_if_cancelled( false );
 
-  stream.expires_after(std::chrono::seconds(30));
+  stream.expires_after( std::chrono::seconds( 30 ) );
 
   state_t state( choices, stream.socket().remote_endpoint() );
 
-  if( co_await beast::async_detect_ssl( stream, buffer ) ) {
+  if ( co_await beast::async_detect_ssl( stream, buffer ) ) {
 
     ssl::stream<stream_type> ssl_stream{ std::move( stream ), ctx };
 
@@ -461,7 +461,7 @@ listen(
 
   while( !cs.cancelled() ) {
 
-    auto socket_executor = net::make_strand(executor.get_inner_executor() );
+    auto socket_executor = net::make_strand( executor.get_inner_executor() );
     auto [ ec, socket ] =
       co_await acceptor.async_accept( socket_executor, net::as_tuple );
 
