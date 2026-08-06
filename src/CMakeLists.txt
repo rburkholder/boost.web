@@ -23,7 +23,6 @@ set(
     config.hpp
     handle_methods.hpp
     handle_signals.hpp
-    KeyWordMatch.hpp
     listen.hpp
     mime_type.hpp
     server_certificate.hpp
