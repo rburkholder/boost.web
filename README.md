@@ -1,6 +1,6 @@
 # web.boost
 
-## inttroduction
+## introduction
 
 * Use Boost Beast Advanced server, flex (plain + SSL) as template for handling web operations.
 * Currently developed on Debian Linux platform
