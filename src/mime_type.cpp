@@ -1,36 +1,64 @@
+/************************************************************************
+ * Copyright(c) 2026, One Unified. All rights reserved.                 *
+ * email: info@oneunified.net                                           *
+ *                                                                      *
+ * This file is provided as is WITHOUT ANY WARRANTY                     *
+ *  without even the implied warranty of                                *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                *
+ *                                                                      *
+ * This software may not be used nor distributed without proper license *
+ * agreement.                                                           *
+ *                                                                      *
+ * See the file LICENSE.txt for redistribution information.             *
+ ************************************************************************/
+
+/*
+ * File:    mime_type.cpp
+ * Author:  raymond@burkholder.net
+ * Project: boost.web
+ * Created: July 22, 2026 18:36
+ */
+
+#include <boost/parser/parser.hpp>
+
 #include "mime_type.hpp"
 
-mime_type::mime_type()
-: m_kwmMimeType( "application/text" , 25 )
-{
-  m_kwmMimeType.AddPattern( "htm",  "text/html" );
-  m_kwmMimeType.AddPattern( "html", "text/html" );
-  m_kwmMimeType.AddPattern( "php",  "text/html" );
-  m_kwmMimeType.AddPattern( "css",  "text/css" );
-  m_kwmMimeType.AddPattern( "txt",  "text/plain" );
-  m_kwmMimeType.AddPattern( "text", "text/plain" );
-  m_kwmMimeType.AddPattern( "js",   "application/javascript" );
-  m_kwmMimeType.AddPattern( "json", "application/json" );
-  m_kwmMimeType.AddPattern( "xml",  "application/xml" );
-  m_kwmMimeType.AddPattern( "swf",  "application/x-shockwave-flash" );
-  m_kwmMimeType.AddPattern( "flv",  "video/x-flv" );
-  m_kwmMimeType.AddPattern( "png",  "image/png" );
-  m_kwmMimeType.AddPattern( "jpe",  "image/jpeg" );
-  m_kwmMimeType.AddPattern( "jpeg", "image/jpeg" );
-  m_kwmMimeType.AddPattern( "jpg",  "image/jpeg" );
-  m_kwmMimeType.AddPattern( "gif",  "image/gif" );
-  m_kwmMimeType.AddPattern( "bmp",  "image/bmp" );
-  m_kwmMimeType.AddPattern( "ico",  "image/vnd.microsoft.icon" );
-  m_kwmMimeType.AddPattern( "tiff", "image/tiff" );
-  m_kwmMimeType.AddPattern( "tif",  "image/tiff" );
-  m_kwmMimeType.AddPattern( "svg",  "image/svg+xml" );
-  m_kwmMimeType.AddPattern( "svgz", "image/svg+xml" );
+namespace {
+  boost::parser::symbols<mime_type::entry_t> const entries = {
+    { "htm",  mime_type::entry_t( mime_type::type_t::html,  "text/html" ) },
+    { "html", mime_type::entry_t( mime_type::type_t::html,  "text/html" ) },
+    { "php",  mime_type::entry_t( mime_type::type_t::html,  "text/html" ) },
+    { "dyn",  mime_type::entry_t( mime_type::type_t::lua,   "text/html" ) },
+    { "lua",  mime_type::entry_t( mime_type::type_t::lua,   "text/html" ) },
+    { "css",  mime_type::entry_t( mime_type::type_t::css,   "text/css" ) },
+    { "txt",  mime_type::entry_t( mime_type::type_t::text,  "text/plain" ) },
+    { "text", mime_type::entry_t( mime_type::type_t::text,  "text/plain" ) },
+    { "js",   mime_type::entry_t( mime_type::type_t::js,    "application/javascript" ) },
+    { "json", mime_type::entry_t( mime_type::type_t::json,  "application/json" ) },
+    { "xml",  mime_type::entry_t( mime_type::type_t::xml,   "application/xml" ) },
+    { "swf",  mime_type::entry_t( mime_type::type_t::flash, "application/x-shockwave-flash" ) },
+    { "flv",  mime_type::entry_t( mime_type::type_t::flash, "video/x-flv" ) },
+    { "png",  mime_type::entry_t( mime_type::type_t::image, "image/png" ) },
+    { "jpe",  mime_type::entry_t( mime_type::type_t::image, "image/jpeg" ) },
+    { "jpeg", mime_type::entry_t( mime_type::type_t::image, "image/jpeg" ) },
+    { "jpg",  mime_type::entry_t( mime_type::type_t::image, "image/jpeg" ) },
+    { "gif",  mime_type::entry_t( mime_type::type_t::image, "image/gif" ) },
+    { "bmp",  mime_type::entry_t( mime_type::type_t::image, "image/bmp" ) },
+    { "ico",  mime_type::entry_t( mime_type::type_t::icon,  "image/vnd.microsoft.icon" ) },
+    { "tiff", mime_type::entry_t( mime_type::type_t::image, "image/tiff" ) },
+    { "tif",  mime_type::entry_t( mime_type::type_t::image, "image/tiff" ) },
+    { "svg",  mime_type::entry_t( mime_type::type_t::svg,   "image/svg+xml" ) },
+    { "svgz", mime_type::entry_t( mime_type::type_t::svg,   "image/svg+xml" ) }
+  };
+}
+
+mime_type::mime_type() {
 }
 
 mime_type::~mime_type() {
 }
 
-const beast::string_view mime_type::lu( const beast::string_view path ) const {
+const mime_type::entry_t mime_type::lu( const beast::string_view path ) const {
 
   auto const ext = [&path] {
     auto const pos = path.rfind( '.' );
@@ -42,7 +70,16 @@ const beast::string_view mime_type::lu( const beast::string_view path ) const {
     return path.substr( pos + 1 );
   }();
 
-  return m_kwmMimeType.FindMatch( ext );
+  entry_t entry;
+  auto const find = [&entry]( auto& ctx ) {
+    entry = _attr( ctx );
+  };
+  auto const parser = +entries[ find ];
+  bool result = boost::parser::parse( ext, parser );
+  assert( result );
+
+
+  return entry;
 
 }
 
