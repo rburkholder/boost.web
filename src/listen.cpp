@@ -103,6 +103,7 @@ template<class Body, class Allocator>
 http::message_generator
 handle_request(
   state_t& state,
+  sol_lua_t& sol_lua,
   http::request<Body, http::basic_fields<Allocator>>&& request
 )
 {
@@ -367,7 +368,7 @@ run_session(
           << "body: '" << request.body() << "'";
       }
 
-      auto response = handle_request( state, std::move( request ) );
+      auto response = handle_request( state, sol_lua, std::move( request ) );
 
       if ( !response.keep_alive() ) {
         co_await beast::async_write( stream, std::move( response ) );
