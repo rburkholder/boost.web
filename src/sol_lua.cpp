@@ -42,20 +42,12 @@ sol_lua_t::sol_lua_t()
   if ( f_instance_identify.valid() ) {
     f_instance_identify( m_nInstance, "begin" );
   }
-  else {
-
-  }
-
 }
 
 sol_lua_t::~sol_lua_t() {
   if ( f_instance_identify.valid() ) {
     f_instance_identify( m_nInstance, "end" );
   }
-  else {
-
-  }
-
 }
 
 void sol_lua_t::print( const std::string_view message ) {
