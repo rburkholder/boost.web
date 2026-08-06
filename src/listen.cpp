@@ -119,7 +119,7 @@ handle_request(
       BOOST_LOG_TRIVIAL(warning)
         << state.endpoint.address() << ':' << state.endpoint.port() << " "
         << "unknown method: '"
-        << request.method() << "'," << request.has_content_length()
+        << request.method() << "'"
         ;
       return bad_request( request, "Unknown HTTP-method", state );
   }
@@ -129,7 +129,7 @@ handle_request(
   if ( url.has_error() ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
-      << "server error: " << request.target();
+      << "server error: " << request.method() << " '" << request.target() << '\'';
     return server_error( request, request.target(), state );
   }
 
@@ -144,8 +144,9 @@ handle_request(
   ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
-      << "illegal target: "
-      << path_raw;
+      << " illegal target "
+      << request.method() << ' ' << '\''
+      << path_raw << '\'';
     return bad_request( request, "Illegal request-target", state );
   }
 
