@@ -169,81 +169,119 @@ handle_request(
 
   const mime_type::entry_t mt_entry( mt.lu( path ) );
 
-  // Attempt to open the file
-  beast::error_code ec;
-  http::file_body::value_type body;
-  body.open( path.c_str(), beast::file_mode::scan, ec );
+  if ( mime_type::type_t::lua == mt_entry.type ) {
+    switch ( request.method() ) {
+      case http::verb::get:
+        try {
+          response_t response{ http::status::ok, request.version() };
+          response.set( http::field::content_type, mt_entry.name );
+          response.keep_alive( request.keep_alive() );
+          lua_method_get( path, sol_lua, response );
+          response.prepare_payload();
+          return response;
+        }
+        catch( boost::system::system_error& ec ) {
+          BOOST_LOG_TRIVIAL(error) << "lua (1) " << ec.code() << ": " << ec.what();
+        }
+        catch( std::exception& e ) {
+          BOOST_LOG_TRIVIAL(error) << "lua (2) " << e.what();
+        }
+        catch (...) {
+          BOOST_LOG_TRIVIAL(error) << "lua (3) problems";
+        }
+        break;
+      case http::verb::post:
+        {
+          // drops down to error
+        }
+        break;
+      case http::verb::head:
+        {
+          // drops down to error
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  else {
+    // Attempt to open the file
+    beast::error_code ec;
+    http::file_body::value_type body;
+    body.open( path.c_str(), beast::file_mode::scan, ec );
 
-  if( ec ) {
-    // Handle the case where the file doesn't exist
-    if( ec == beast::errc::no_such_file_or_directory ) {
-      // todo: similar for ads.txt, sitemap.xml
-      if ( 0 == request.target().compare( "/robots.txt" ) ) {
-        response_t response{ http::status::ok, request.version() };
-        response.set(http::field::content_type, mt_entry.name );
-        //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        response.keep_alive( request.keep_alive() );
-        resource_robots_txt( response );
-        //response.prepare_payload();
-        return response;
+    if( ec ) {
+      // Handle the case where the file doesn't exist
+      if( ec == beast::errc::no_such_file_or_directory ) {
+        // todo: similar for ads.txt, sitemap.xml
+        if ( 0 == request.target().compare( "/robots.txt" ) ) {
+          response_t response{ http::status::ok, request.version() };
+          response.set( http::field::content_type, mt_entry.name );
+          //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+          response.keep_alive( request.keep_alive() );
+          resource_robots_txt( response );
+          //response.prepare_payload();
+          return response;
+        }
+        else {
+          return not_found( request, request.target(), state );
+        }
       }
       else {
-        return not_found( request, request.target(), state );
+        // Handle an unknown error
+        return server_error( request, ec.message(), state );
       }
     }
-    else {
-      // Handle an unknown error
-      return server_error( request, ec.message(), state );
+
+    // Cache the size since we need it after the move
+    auto const size = body.size();
+
+    switch ( request.method() ) {
+      case http::verb::get:
+        {
+          http::response<http::file_body> response{
+            std::piecewise_construct,
+            std::make_tuple( std::move( body ) ),
+            std::make_tuple( http::status::ok, request.version() )
+          };
+          method_get( response );
+          //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+          response.set( http::field::content_type, mt_entry.name );
+          response.content_length( size );
+          response.keep_alive( request.keep_alive() );
+          return response;
+        }
+        break;
+      case http::verb::post:
+        {
+          response_t response{ http::status::ok, request.version() };
+          method_post( response );
+          //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+          response.set( http::field::content_type, mt_entry.name );
+          //response.content_length( size );
+          response.keep_alive( request.keep_alive() );
+          response.prepare_payload();
+          return response;
+        }
+        break;
+      case http::verb::head:
+        {
+          // Respond to HEAD request with empty body
+          http::response<http::empty_body> response{ http::status::ok, request.version() };
+          method_head( response );
+          //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
+          response.set( http::field::content_type, mt_entry.name );
+          response.content_length( size );
+          response.keep_alive( request.keep_alive() );
+          return response;
+        }
+        break;
+      default:
+        break;
     }
   }
 
-  // Cache the size since we need it after the move
-  auto const size = body.size();
-
-  switch ( request.method() ) {
-    case http::verb::get:
-      {
-        http::response<http::file_body> response{
-          std::piecewise_construct,
-          std::make_tuple( std::move( body ) ),
-          std::make_tuple( http::status::ok, request.version() )
-        };
-        method_get( response );
-        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt_entry.name );
-        response.content_length( size );
-        response.keep_alive( request.keep_alive() );
-        return response;
-      }
-      break;
-    case http::verb::post:
-      {
-        response_t response{ http::status::ok, request.version() };
-        method_post( response );
-        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt_entry.name );
-        //response.content_length( size );
-        response.keep_alive( request.keep_alive() );
-        response.prepare_payload();
-        return response;
-      }
-      break;
-    case http::verb::head:
-      {
-        // Respond to HEAD request with empty body
-        http::response<http::empty_body> response{ http::status::ok, request.version() };
-        method_head( response );
-        //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt_entry.name );
-        response.content_length( size );
-        response.keep_alive( request.keep_alive() );
-        return response;
-      }
-      break;
-    default:
-      return server_error( request, "functionally unreachable", state );
-      break;
-  }
+  return server_error( request, "functionally unreachable", state );
 }
 
 template<typename Stream>
