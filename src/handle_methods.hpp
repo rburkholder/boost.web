@@ -23,14 +23,10 @@
 
 #include <functional>
 
-#include <boost/beast.hpp>
-//#include <boost/beast/http/message.hpp>
-//#include <boost/beast/http/message_fwd.hpp>
-//#include <boost/beast/http/string_body_fwd.hpp>
-//#include <boost/beast/core/string_type.hpp>
+//#include <boost/beast.hpp>
+#include <boost/beast/http.hpp>
 
 // each needs to be thread safe, maintain state in a different structure
-
 #include "sol_lua.hpp"
 
 namespace http = boost::beast::http;
