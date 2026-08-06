@@ -139,8 +139,8 @@ handle_request(
   // todo: run parser on this
   if (    path_raw.empty()
        || '/' != path_raw[0]
-       || beast::string_view::npos != path_raw.find( ".." ) // path backtrack
-       || beast::string_view::npos != path_raw.find( "/." ) // hidden file/folder
+       || beast::string_view::npos != path_raw.find( "/." ) // hidden file/folder, includes backtrack
+    // || beast::string_view::npos != path_raw.find( ".." ) // path backtrack
   ) {
     BOOST_LOG_TRIVIAL(warning)
       << state.endpoint.address() << ':' << state.endpoint.port() << " "
