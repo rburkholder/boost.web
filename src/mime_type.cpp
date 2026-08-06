@@ -23,6 +23,8 @@
 
 #include "mime_type.hpp"
 
+// more types can be found in /etc/mime.types
+
 namespace {
   boost::parser::symbols<mime_type::entry_t> const entries = {
     { "htm",  mime_type::entry_t( mime_type::type_t::html,  "text/html" ) },
@@ -30,9 +32,11 @@ namespace {
     { "php",  mime_type::entry_t( mime_type::type_t::html,  "text/html" ) },
     { "dyn",  mime_type::entry_t( mime_type::type_t::lua,   "text/html" ) },
     { "lua",  mime_type::entry_t( mime_type::type_t::lua,   "text/html" ) },
+    { "md",   mime_type::entry_t( mime_type::type_t::md,    "text/markdown" ) },
     { "css",  mime_type::entry_t( mime_type::type_t::css,   "text/css" ) },
     { "txt",  mime_type::entry_t( mime_type::type_t::text,  "text/plain" ) },
     { "text", mime_type::entry_t( mime_type::type_t::text,  "text/plain" ) },
+    { "csv",  mime_type::entry_t( mime_type::type_t::csv,   "text/csv" ) },
     { "js",   mime_type::entry_t( mime_type::type_t::js,    "application/javascript" ) },
     { "json", mime_type::entry_t( mime_type::type_t::json,  "application/json" ) },
     { "xml",  mime_type::entry_t( mime_type::type_t::xml,   "application/xml" ) },
@@ -71,13 +75,12 @@ const mime_type::entry_t mime_type::lu( const beast::string_view path ) const {
   }();
 
   entry_t entry;
-  auto const find = [&entry]( auto& ctx ) {
+  auto const f_suffix = [&entry]( auto& ctx ) {
     entry = _attr( ctx );
   };
-  auto const parser = +entries[ find ];
+  auto const parser = +entries[ f_suffix ];
   bool result = boost::parser::parse( ext, parser );
   assert( result );
-
 
   return entry;
 

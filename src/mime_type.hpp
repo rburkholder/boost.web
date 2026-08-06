@@ -29,7 +29,7 @@ class mime_type {
 public:
 
   enum class type_t {
-    html = 1, lua, image, xml, css, text, flash, js, json, icon, svg
+    html = 1, md, lua, image, xml, css, text, flash, js, json, icon, svg, csv, unknown
   };
 
   struct entry_t {
@@ -38,7 +38,7 @@ public:
     entry_t( type_t type_, beast::string_view name_ )
     : type( type_ ), name( name_ )
     {}
-    entry_t(): type( type_t::text ), name( "text/plain" ) {}
+    entry_t(): type( type_t::unknown ), name( "application/octet-stream" ) {}
   };
 
   mime_type();
