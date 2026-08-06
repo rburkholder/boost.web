@@ -167,6 +167,8 @@ handle_request(
     << ( state.bSsl ? ( ( nullptr == state.ssl_name ) ? "unnamed" : state.ssl_name ) : ( "http") ) << ", "
     << request.method() << ", '" << request.target() << "', '" << path << "', '" << url->query() << "'";
 
+  const mime_type::entry_t mt_entry( mt.lu( path ) );
+
   // Attempt to open the file
   beast::error_code ec;
   http::file_body::value_type body;
@@ -178,7 +180,7 @@ handle_request(
       // todo: similar for ads.txt, sitemap.xml
       if ( 0 == request.target().compare( "/robots.txt" ) ) {
         response_t response{ http::status::ok, request.version() };
-        response.set(http::field::content_type, mt.lu( path ).name );
+        response.set(http::field::content_type, mt_entry.name );
         //response.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         response.keep_alive( request.keep_alive() );
         resource_robots_txt( response );
@@ -208,7 +210,7 @@ handle_request(
         };
         method_get( response );
         //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt.lu( path ).name );
+        response.set( http::field::content_type, mt_entry.name );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );
         return response;
@@ -219,7 +221,7 @@ handle_request(
         response_t response{ http::status::ok, request.version() };
         method_post( response );
         //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt.lu( path ).name );
+        response.set( http::field::content_type, mt_entry.name );
         //response.content_length( size );
         response.keep_alive( request.keep_alive() );
         response.prepare_payload();
@@ -232,7 +234,7 @@ handle_request(
         http::response<http::empty_body> response{ http::status::ok, request.version() };
         method_head( response );
         //response.set( http::field::server, BOOST_BEAST_VERSION_STRING );
-        response.set( http::field::content_type, mt.lu( path ).name );
+        response.set( http::field::content_type, mt_entry.name );
         response.content_length( size );
         response.keep_alive( request.keep_alive() );
         return response;
