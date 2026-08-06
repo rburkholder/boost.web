@@ -102,7 +102,7 @@ response_t server_error( http::request<Body, http::basic_fields<Allocator>>& req
 template<class Body, class Allocator>
 http::message_generator
 handle_request(
-  state_t state,
+  state_t& state,
   http::request<Body, http::basic_fields<Allocator>>&& request
 )
 {
@@ -305,7 +305,7 @@ net::awaitable<void, executor_type>
 run_session(
   Stream& stream,
   beast::flat_buffer& buffer,
-  state_t state
+  state_t& state
 )
 {
 
