@@ -75,12 +75,15 @@ const mime_type::entry_t mime_type::lu( const beast::string_view path ) const {
   }();
 
   entry_t entry;
+
   auto const f_suffix = [&entry]( auto& ctx ) {
     entry = _attr( ctx );
   };
-  auto const parser = +entries[ f_suffix ];
+  auto const parser = +entries[ f_suffix ] >> boost::parser::eoi;
   bool result = boost::parser::parse( ext, parser );
-  assert( result );
+  if ( !result ) {
+    return entry_t();
+  }
 
   return entry;
 

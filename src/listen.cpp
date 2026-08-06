@@ -148,7 +148,7 @@ handle_request(
       << " illegal target "
       << request.method() << ' ' << '\''
       << path_raw << '\'';
-    return bad_request( request, "Illegal request-target", state );
+    return bad_request( request, "Illegal request-target (1)", state );
   }
 
   // assign root of content directory, use index.html in each directory
@@ -168,6 +168,9 @@ handle_request(
     << request.method() << ", '" << request.target() << "', '" << path << "', '" << url->query() << "'";
 
   const mime_type::entry_t mt_entry( mt.lu( path ) );
+  if ( mime_type::type_t::unknown == mt_entry.type ) {
+    return bad_request( request, "Illegal request-target (2)", state );
+  }
 
   if ( mime_type::type_t::lua == mt_entry.type ) {
     switch ( request.method() ) {
