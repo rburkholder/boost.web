@@ -180,7 +180,7 @@ handle_request(
           response.set( http::field::content_type, mt_entry.name );
           response.keep_alive( request.keep_alive() );
           lua_method_get( path, sol_lua, response );
-          response.prepare_payload();
+          //response.prepare_payload();
           return response;
         }
         catch( boost::system::system_error& ec ) {
